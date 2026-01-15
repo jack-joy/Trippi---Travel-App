@@ -418,15 +418,19 @@ export default function BucketListScreen() {
   );
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      {/* Friends' Bucket Lists (moved above header) */}
-      <View style={[styles.friendsSection, { marginTop: 8 }]}>
-        <View style={styles.friendsHeader}>
-          <Text style={styles.friendsTitle}>Friends' Bucket Lists</Text>
-          <TouchableOpacity>
-            <Text style={styles.friendsSeeAll}>See All</Text>
-          </TouchableOpacity>
-        </View>
+    <View style={styles.container}>
+      <ScrollView 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingTop: 16, paddingBottom: insets.bottom + 80 }}
+      >
+        {/* Friends' Bucket Lists */}
+        <View style={styles.friendsSection}>
+          <View style={styles.friendsHeader}>
+            <Text style={styles.friendsTitle}>Friends' Bucket Lists</Text>
+            <TouchableOpacity>
+              <Text style={styles.friendsSeeAll}>See All</Text>
+            </TouchableOpacity>
+          </View>
         <FlatList
           horizontal
           data={state.availableTrips}
@@ -628,6 +632,7 @@ export default function BucketListScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={[styles.listContainer, { paddingBottom: insets.bottom + 20 }]}
           showsVerticalScrollIndicator={false}
+          scrollEnabled={false}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Ionicons name="map-outline" size={64} color="#ccc" />
@@ -639,6 +644,7 @@ export default function BucketListScreen() {
       ) : (
         <FlatList
           data={state.friends}
+          scrollEnabled={false}
           renderItem={({ item }) => (
             <View style={styles.friendBucketCard}>
               <Image source={{ uri: item.previewImage }} style={styles.friendBucketPreview} />
@@ -689,6 +695,7 @@ export default function BucketListScreen() {
           }
         />
       )}
+      </ScrollView>
       
       {/* Detail Modal */}
       <Modal

@@ -212,8 +212,8 @@ export default function TripsScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-      <View style={styles.header}>
+    <SafeAreaView style={styles.container} edges={['left', 'right']}>
+      <View style={[styles.header, { marginTop: 4 }]}>
         <Text style={styles.title}>My Trips</Text>
         <TouchableOpacity 
           style={styles.createButton}
