@@ -5,7 +5,7 @@ Trippi is a modern social travel planning app built with React Native and Expo. 
 
 ## Trippi App Demo
 
-<video src="screenshots/app-demo.mp4" controls width="600"></video>
+(https://youtu.be/7tWhDI9plHM)
 
 ## Features
 
