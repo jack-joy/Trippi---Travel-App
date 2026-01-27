@@ -29,6 +29,13 @@ export type Tables = {
       is_completed: boolean;
       image: string;
       created_at: string;
+      activities?: string[];
+      hotels?: string[];
+      restaurants?: string[];
+      flights?: string;
+      best_time?: string;
+      estimated_budget?: string;
+      duration?: string;
     };
     Insert: Omit<BucketListItem, 'id' | 'created_at'> & { id?: string; created_at?: string };
     Update: Partial<Omit<BucketListItem, 'id' | 'created_at'>>;

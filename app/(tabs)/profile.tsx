@@ -9,6 +9,12 @@ const user = {
   name: 'John Doe',
   username: '@johndoe',
   bio: 'Travel enthusiast | Photographer | Food lover | 23 countries and counting',
+  currentTrip: {
+    location: 'Tokyo, Japan',
+    startDate: 'Jan 20, 2026',
+    endDate: 'Feb 5, 2026',
+    emoji: '🇯🇵'
+  },
   stats: {
     countries: 23,
     continents: 5,
@@ -128,6 +134,21 @@ export default function ProfileScreen() {
             </View>
           </View>
           
+          {/* Current Trip Banner */}
+          {user.currentTrip && (
+            <View style={styles.travelBanner}>
+              <View style={styles.travelBannerContent}>
+                <Text style={styles.travelEmoji}>{user.currentTrip.emoji}</Text>
+                <View style={styles.travelInfo}>
+                  <Text style={styles.travelStatus}>Currently Traveling</Text>
+                  <Text style={styles.travelLocation}>{user.currentTrip.location}</Text>
+                  <Text style={styles.travelDates}>{user.currentTrip.startDate} - {user.currentTrip.endDate}</Text>
+                </View>
+              </View>
+              <Ionicons name="airplane" size={20} color="#0fa3a3" />
+            </View>
+          )}
+          
           <View style={styles.statsContainer}>
             <View style={styles.statItem}>
               <Text style={styles.statNumber}>{user.stats.followers}</Text>
@@ -207,13 +228,13 @@ export default function ProfileScreen() {
                 style={[styles.segmentBtn, activeSection === 'recent' && styles.segmentBtnActive]}
                 onPress={() => setActiveSection('recent')}
               >
-                <Text style={[styles.segmentText, activeSection === 'recent' && styles.segmentTextActive]}>Recent Trips</Text>
+                <Text style={[styles.segmentText, activeSection === 'recent' && styles.segmentTextActive]}>Past Trips</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.segmentBtn, activeSection === 'upcoming' && styles.segmentBtnActive]}
                 onPress={() => setActiveSection('upcoming')}
               >
-                <Text style={[styles.segmentText, activeSection === 'upcoming' && styles.segmentTextActive]}>Upcoming Trips</Text>
+                <Text style={[styles.segmentText, activeSection === 'upcoming' && styles.segmentTextActive]}>Upcoming</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.segmentBtn, activeSection === 'bucket' && styles.segmentBtnActive]}
@@ -260,7 +281,7 @@ export default function ProfileScreen() {
           {activeSection === 'recent' && (
           <View style={styles.sectionFullBleed}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Recent Trips</Text>
+              <Text style={styles.sectionTitle}>Past Trips</Text>
               <TouchableOpacity>
                 <Text style={styles.seeAll}>See All</Text>
               </TouchableOpacity>
@@ -375,6 +396,48 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     paddingHorizontal: 0,
     lineHeight: 20,
+  },
+  travelBanner: {
+    backgroundColor: '#e6f7f7',
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 16,
+    marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: '#0fa3a3',
+  },
+  travelBannerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  travelEmoji: {
+    fontSize: 32,
+    marginRight: 12,
+  },
+  travelInfo: {
+    flex: 1,
+  },
+  travelStatus: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#0fa3a3',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  travelLocation: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 2,
+  },
+  travelDates: {
+    fontSize: 13,
+    color: '#666',
+    marginTop: 2,
   },
   statsContainer: {
     flexDirection: 'row',

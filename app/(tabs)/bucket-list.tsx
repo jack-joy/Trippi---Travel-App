@@ -43,7 +43,9 @@ interface BucketListState {
   viewMode: 'my' | 'friends';
   availableTrips: FriendBucketList[];
   selectedItem: BucketListItem | null;
+  selectedFriendTrip: FriendBucketList | null;
   showDetailModal: boolean;
+  showFriendDetailModal: boolean;
   showEditModal: boolean;
   editItem: {
     name: string;
@@ -63,6 +65,14 @@ interface FriendBucketList {
   tripTitle: string;
   dates: string;
   location: string;
+  notes?: string;
+  activities?: string[];
+  hotels?: string[];
+  restaurants?: string[];
+  flights?: string;
+  best_time?: string;
+  estimated_budget?: string;
+  duration?: string;
 }
 
 export default function BucketListScreen() {
@@ -79,13 +89,15 @@ export default function BucketListScreen() {
     viewMode: 'my',
     availableTrips: [],
     selectedItem: null,
+    selectedFriendTrip: null,
     showDetailModal: false,
+    showFriendDetailModal: false,
     showEditModal: false,
     editItem: { name: '', location: '', notes: '', priority: 'medium' },
     requestedTrips: new Set<string>(),
   });
 
-  const { items, searchQuery, isAdding, newItem, isLoading, friends, friendsLoading, viewMode, availableTrips, selectedItem, showDetailModal, showEditModal, editItem, requestedTrips } = state;
+  const { items, searchQuery, isAdding, newItem, isLoading, friends, friendsLoading, viewMode, availableTrips, selectedItem, selectedFriendTrip, showDetailModal, showFriendDetailModal, showEditModal, editItem, requestedTrips } = state;
 
   const updateState = (updates: Partial<BucketListState>) => {
     setState(prev => ({ ...prev, ...updates }));
@@ -116,33 +128,54 @@ export default function BucketListScreen() {
           user_id: user?.id ?? 'mock',
           name: 'Santorini Sunset',
           location: 'Santorini, Greece',
-          notes: 'May 20 - Jun 5, 2026',
-          priority: 'medium',
+          notes: 'Watch the famous sunset in Oia, explore white-washed villages, and relax on unique beaches.',
+          priority: 'high',
           is_completed: false,
           image: 'https://images.unsplash.com/photo-1613395877344-13d4a8e0d49e?q=80&w=800&auto=format&fit=crop',
           created_at: new Date().toISOString(),
+          activities: ['Sunset viewing in Oia', 'Wine tasting tour', 'Red Beach visit', 'Boat tour to volcano', 'Explore Fira town'],
+          hotels: ['Katikies Hotel', 'Canaves Oia Suites', 'Grace Hotel Santorini'],
+          restaurants: ['Ammoudi Fish Tavern', 'Metaxi Mas', 'Selene Restaurant'],
+          flights: 'Direct flights from Athens (ATH) to Santorini (JTR) - 45 min. International: Connect through Athens.',
+          best_time: 'April to November (peak: June-September)',
+          estimated_budget: '$2,500 - $4,000',
+          duration: '4-5 days',
         },
         {
           id: 'b2',
           user_id: user?.id ?? 'mock',
           name: 'Safari in Maasai Mara',
           location: 'Narok, Kenya',
-          notes: 'Jul 10 - Jul 25, 2026',
-          priority: 'medium',
+          notes: 'Experience the Great Migration and see the Big Five in their natural habitat.',
+          priority: 'high',
           is_completed: false,
-          image: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=800',
+          image: 'https://images.unsplash.com/photo-1516426122078-c23e76319801?w=800',
           created_at: new Date().toISOString(),
+          activities: ['Game drives', 'Hot air balloon safari', 'Visit Maasai village', 'Photography safari', 'Bush dinner'],
+          hotels: ['Mara Serena Safari Lodge', 'Governors\' Camp', 'Angama Mara'],
+          restaurants: ['Lodge dining (included in safari packages)'],
+          flights: 'Fly to Nairobi (NBO), then domestic flight to Maasai Mara or drive (5-6 hours).',
+          best_time: 'July to October (Great Migration)',
+          estimated_budget: '$3,000 - $6,000',
+          duration: '5-7 days',
         },
         {
           id: 'b3',
           user_id: user?.id ?? 'mock',
           name: 'Northern Lights',
           location: 'Reykjavík, Iceland',
-          notes: 'Dec 1 - Dec 15, 2026',
+          notes: 'Chase the Aurora Borealis and explore Iceland\'s stunning winter landscapes.',
           priority: 'medium',
           is_completed: false,
           image: 'https://images.unsplash.com/photo-1472214103451-9374bd1c798e?w=800',
           created_at: new Date().toISOString(),
+          activities: ['Northern Lights tour', 'Blue Lagoon spa', 'Golden Circle tour', 'Ice cave exploration', 'Glacier hiking'],
+          hotels: ['Hotel Rangá', 'Ion Adventure Hotel', 'Reykjavik Konsulat Hotel'],
+          restaurants: ['Dill Restaurant', 'Grillmarkaðurinn', 'Fiskfélagið'],
+          flights: 'Direct flights available from major US/European cities to Keflavík (KEF) - 5-7 hours.',
+          best_time: 'September to March (peak: December-February)',
+          estimated_budget: '$2,000 - $3,500',
+          duration: '5-6 days',
         },
       ];
 
@@ -193,6 +226,14 @@ export default function BucketListScreen() {
         tripTitle: 'Japan Cherry Blossoms',
         dates: 'Mar 25 - Apr 8, 2026',
         location: 'Tokyo, Kyoto, Osaka',
+        notes: 'Experience the magical cherry blossom season across Japan\'s most iconic cities, from ancient temples to modern metropolises.',
+        activities: ['Cherry blossom viewing in Ueno Park', 'Visit Senso-ji Temple', 'Fushimi Inari Shrine', 'Arashiyama Bamboo Grove', 'Osaka Castle tour'],
+        hotels: ['Park Hyatt Tokyo', 'The Ritz-Carlton Kyoto', 'Conrad Osaka'],
+        restaurants: ['Sukiyabashi Jiro', 'Kikunoi Honten', 'Dotonbori Street Food'],
+        flights: 'Direct flights to Tokyo (NRT/HND), then Shinkansen between cities.',
+        best_time: 'Late March to early April',
+        estimated_budget: '$3,500 - $5,500',
+        duration: '14 days',
       },
       {
         userId: 'u_emma',
@@ -203,6 +244,14 @@ export default function BucketListScreen() {
         tripTitle: 'Australian Outback',
         dates: 'Apr 15 - May 5, 2026',
         location: 'Sydney, Melbourne, Cairns',
+        notes: 'Explore Australia\'s diverse landscapes from cosmopolitan cities to the Great Barrier Reef and the rugged Outback.',
+        activities: ['Sydney Opera House tour', 'Great Barrier Reef snorkeling', 'Uluru sunrise viewing', 'Great Ocean Road drive', 'Daintree Rainforest'],
+        hotels: ['Park Hyatt Sydney', 'Crown Towers Melbourne', 'Shangri-La Cairns'],
+        restaurants: ['Quay Restaurant', 'Attica', 'Ochre Restaurant'],
+        flights: 'Fly into Sydney (SYD), domestic flights between cities.',
+        best_time: 'April to October',
+        estimated_budget: '$4,000 - $6,500',
+        duration: '20 days',
       },
       {
         userId: 'u_carlos',
@@ -213,6 +262,14 @@ export default function BucketListScreen() {
         tripTitle: 'Caribbean Paradise',
         dates: 'Feb 10 - Feb 24, 2026',
         location: 'Jamaica, Bahamas, Aruba',
+        notes: 'Island hopping adventure through the Caribbean\'s most beautiful beaches and vibrant cultures.',
+        activities: ['Dunn\'s River Falls climb', 'Snorkeling in Nassau', 'Arikok National Park', 'Bob Marley Museum', 'Beach hopping'],
+        hotels: ['Round Hill Hotel Jamaica', 'Atlantis Paradise Island', 'Bucuti & Tara Beach Resort'],
+        restaurants: ['Scotchies Jamaica', 'Graycliff Restaurant', 'The Flying Fishbone'],
+        flights: 'Fly into Montego Bay (MBJ), then island hop via regional flights.',
+        best_time: 'December to April',
+        estimated_budget: '$3,000 - $5,000',
+        duration: '14 days',
       },
       {
         userId: 'u_lily',
@@ -223,6 +280,14 @@ export default function BucketListScreen() {
         tripTitle: 'African Safari',
         dates: 'Jul 5 - Jul 22, 2026',
         location: 'Tanzania, Kenya, South Africa',
+        notes: 'Ultimate African safari experience witnessing the Great Migration and exploring diverse wildlife across three countries.',
+        activities: ['Serengeti game drives', 'Maasai Mara safari', 'Kruger National Park', 'Hot air balloon safari', 'Visit Maasai village'],
+        hotels: ['Four Seasons Safari Lodge', 'Angama Mara', 'Singita Kruger National Park'],
+        restaurants: ['Carnivore Restaurant Nairobi', 'The Boma Dinner', 'Moyo Melrose Arch'],
+        flights: 'Fly into Kilimanjaro (JRO) or Nairobi (NBO), domestic flights between parks.',
+        best_time: 'June to October',
+        estimated_budget: '$5,000 - $8,500',
+        duration: '17 days',
       },
     ];
     
@@ -237,6 +302,14 @@ export default function BucketListScreen() {
         tripTitle: 'European Adventure',
         dates: 'Jun 15 - Jul 2, 2026',
         location: 'Italy, France, Switzerland',
+        notes: 'Multi-country European tour covering the best of Italy, France, and Switzerland with a mix of culture, food, and scenic beauty.',
+        activities: ['Colosseum tour in Rome', 'Eiffel Tower visit', 'Swiss Alps hiking', 'Venice gondola ride', 'Wine tasting in Tuscany'],
+        hotels: ['Hotel Artemide Rome', 'Hotel Le Six Paris', 'Hotel Schweizerhof Bern'],
+        restaurants: ['Trattoria Da Enzo', 'Le Comptoir du Relais', 'Restaurant Rosengarten'],
+        flights: 'Fly into Rome (FCO), travel by train between cities, depart from Zurich (ZRH).',
+        best_time: 'May to September',
+        estimated_budget: '$4,500 - $7,000',
+        duration: '17 days',
       },
       {
         userId: 'u_marcus',
@@ -438,7 +511,11 @@ export default function BucketListScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.friendsList}
           renderItem={({ item }) => (
-            <View style={styles.friendCard}>
+            <TouchableOpacity 
+              style={styles.friendCard}
+              onPress={() => updateState({ selectedFriendTrip: item, showFriendDetailModal: true })}
+              activeOpacity={0.8}
+            >
               <Image source={{ uri: item.previewImage }} style={styles.friendPreview} />
               <View style={styles.friendCardContent}>
                 <Text style={styles.friendTripTitle} numberOfLines={1}>{item.tripTitle}</Text>
@@ -454,7 +531,10 @@ export default function BucketListScreen() {
                       styles.joinBtn,
                       requestedTrips.has(item.userId) && styles.requestedBtn
                     ]} 
-                    onPress={() => requestToJoin(item.userId)}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      requestToJoin(item.userId);
+                    }}
                     disabled={requestedTrips.has(item.userId)}
                   >
                     <Text style={[
@@ -466,7 +546,7 @@ export default function BucketListScreen() {
                   </TouchableOpacity>
                 </View>
               </View>
-            </View>
+            </TouchableOpacity>
           )}
           ListEmptyComponent={
             state.friendsLoading ? (
@@ -646,7 +726,10 @@ export default function BucketListScreen() {
           data={state.friends}
           scrollEnabled={false}
           renderItem={({ item }) => (
-            <View style={styles.friendBucketCard}>
+            <TouchableOpacity 
+              style={styles.friendBucketCard}
+              onPress={() => updateState({ selectedFriendTrip: item, showFriendDetailModal: true })}
+            >
               <Image source={{ uri: item.previewImage }} style={styles.friendBucketPreview} />
               <View style={styles.friendBucketInfo}>
                 <Text style={styles.friendBucketTripTitle} numberOfLines={1}>{item.tripTitle}</Text>
@@ -664,18 +747,9 @@ export default function BucketListScreen() {
                     <Text style={styles.friendBucketName}>{item.name}</Text>
                     <Text style={styles.friendBucketMeta}>{item.itemsCount} destinations</Text>
                   </View>
-                  <TouchableOpacity 
-                    style={styles.viewBtn} 
-                    onPress={() => {
-                      // Navigate to friend's bucket list detail view
-                      Alert.alert('View Bucket List', `Viewing ${item.name}'s bucket list`);
-                    }}
-                  >
-                    <Text style={styles.viewBtnText}>View</Text>
-                  </TouchableOpacity>
                 </View>
               </View>
-            </View>
+            </TouchableOpacity>
           )}
           keyExtractor={(item) => item.userId}
           contentContainerStyle={[styles.listContainer, { paddingBottom: insets.bottom + 20 }]}
@@ -737,9 +811,94 @@ export default function BucketListScreen() {
                     <View style={styles.detailSection}>
                       <View style={styles.detailRow}>
                         <Ionicons name="document-text" size={20} color="#0fa3a3" />
-                        <Text style={styles.detailSectionTitle}>Notes</Text>
+                        <Text style={styles.detailSectionTitle}>About</Text>
                       </View>
                       <Text style={styles.detailNotes}>{selectedItem.notes}</Text>
+                    </View>
+                  )}
+                  
+                  {selectedItem.duration && (
+                    <View style={styles.detailSection}>
+                      <View style={styles.detailRow}>
+                        <Ionicons name="time" size={20} color="#0fa3a3" />
+                        <Text style={styles.detailSectionTitle}>Duration</Text>
+                      </View>
+                      <Text style={styles.detailText}>{selectedItem.duration}</Text>
+                    </View>
+                  )}
+                  
+                  {selectedItem.best_time && (
+                    <View style={styles.detailSection}>
+                      <View style={styles.detailRow}>
+                        <Ionicons name="calendar" size={20} color="#0fa3a3" />
+                        <Text style={styles.detailSectionTitle}>Best Time to Visit</Text>
+                      </View>
+                      <Text style={styles.detailText}>{selectedItem.best_time}</Text>
+                    </View>
+                  )}
+                  
+                  {selectedItem.estimated_budget && (
+                    <View style={styles.detailSection}>
+                      <View style={styles.detailRow}>
+                        <Ionicons name="cash" size={20} color="#0fa3a3" />
+                        <Text style={styles.detailSectionTitle}>Estimated Budget</Text>
+                      </View>
+                      <Text style={styles.detailText}>{selectedItem.estimated_budget}</Text>
+                    </View>
+                  )}
+                  
+                  {selectedItem.activities && selectedItem.activities.length > 0 && (
+                    <View style={styles.detailSection}>
+                      <View style={styles.detailRow}>
+                        <Ionicons name="list" size={20} color="#0fa3a3" />
+                        <Text style={styles.detailSectionTitle}>Activities</Text>
+                      </View>
+                      {selectedItem.activities.map((activity, index) => (
+                        <View key={index} style={styles.listItem}>
+                          <Text style={styles.bullet}>•</Text>
+                          <Text style={styles.listItemText}>{activity}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                  
+                  {selectedItem.hotels && selectedItem.hotels.length > 0 && (
+                    <View style={styles.detailSection}>
+                      <View style={styles.detailRow}>
+                        <Ionicons name="bed" size={20} color="#0fa3a3" />
+                        <Text style={styles.detailSectionTitle}>Hotels</Text>
+                      </View>
+                      {selectedItem.hotels.map((hotel, index) => (
+                        <View key={index} style={styles.listItem}>
+                          <Text style={styles.bullet}>•</Text>
+                          <Text style={styles.listItemText}>{hotel}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                  
+                  {selectedItem.restaurants && selectedItem.restaurants.length > 0 && (
+                    <View style={styles.detailSection}>
+                      <View style={styles.detailRow}>
+                        <Ionicons name="restaurant" size={20} color="#0fa3a3" />
+                        <Text style={styles.detailSectionTitle}>Restaurants</Text>
+                      </View>
+                      {selectedItem.restaurants.map((restaurant, index) => (
+                        <View key={index} style={styles.listItem}>
+                          <Text style={styles.bullet}>•</Text>
+                          <Text style={styles.listItemText}>{restaurant}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                  
+                  {selectedItem.flights && (
+                    <View style={styles.detailSection}>
+                      <View style={styles.detailRow}>
+                        <Ionicons name="airplane" size={20} color="#0fa3a3" />
+                        <Text style={styles.detailSectionTitle}>Flights</Text>
+                      </View>
+                      <Text style={styles.detailText}>{selectedItem.flights}</Text>
                     </View>
                   )}
                   
@@ -864,6 +1023,203 @@ export default function BucketListScreen() {
                 <Text style={{ color: '#999' }}>Loading...</Text>
               </View>
             )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Friend Trip Detail Modal */}
+      <Modal
+        visible={showFriendDetailModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => updateState({ showFriendDetailModal: false, selectedFriendTrip: null })}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.detailModalContent}>
+            <View style={styles.detailModalHeader}>
+              <Text style={styles.detailModalTitle}>Trip Details</Text>
+              <TouchableOpacity onPress={() => updateState({ showFriendDetailModal: false, selectedFriendTrip: null })}>
+                <Ionicons name="close" size={28} color="#333" />
+              </TouchableOpacity>
+            </View>
+            
+            {selectedFriendTrip ? (
+              <ScrollView style={styles.detailModalBody} showsVerticalScrollIndicator={false}>
+                <Image 
+                  source={{ uri: selectedFriendTrip.previewImage }} 
+                  style={styles.detailImage}
+                  resizeMode="cover"
+                />
+                
+                <View style={styles.detailContent}>
+                  <Text style={styles.detailName}>{selectedFriendTrip.tripTitle}</Text>
+                  
+                  <View style={styles.detailRow}>
+                    <Ionicons name="location" size={20} color="#0fa3a3" />
+                    <Text style={styles.detailLocation}>{selectedFriendTrip.location}</Text>
+                  </View>
+                  
+                  {selectedFriendTrip.notes && (
+                    <View style={styles.detailSection}>
+                      <View style={styles.detailRow}>
+                        <Ionicons name="document-text" size={20} color="#0fa3a3" />
+                        <Text style={styles.detailSectionTitle}>About</Text>
+                      </View>
+                      <Text style={styles.detailNotes}>{selectedFriendTrip.notes}</Text>
+                    </View>
+                  )}
+                  
+                  {selectedFriendTrip.duration && (
+                    <View style={styles.detailSection}>
+                      <View style={styles.detailRow}>
+                        <Ionicons name="time" size={20} color="#0fa3a3" />
+                        <Text style={styles.detailSectionTitle}>Duration</Text>
+                      </View>
+                      <Text style={styles.detailText}>{selectedFriendTrip.duration}</Text>
+                    </View>
+                  )}
+                  
+                  {selectedFriendTrip.best_time && (
+                    <View style={styles.detailSection}>
+                      <View style={styles.detailRow}>
+                        <Ionicons name="calendar" size={20} color="#0fa3a3" />
+                        <Text style={styles.detailSectionTitle}>Best Time to Visit</Text>
+                      </View>
+                      <Text style={styles.detailText}>{selectedFriendTrip.best_time}</Text>
+                    </View>
+                  )}
+                  
+                  {selectedFriendTrip.estimated_budget && (
+                    <View style={styles.detailSection}>
+                      <View style={styles.detailRow}>
+                        <Ionicons name="cash" size={20} color="#0fa3a3" />
+                        <Text style={styles.detailSectionTitle}>Estimated Budget</Text>
+                      </View>
+                      <Text style={styles.detailText}>{selectedFriendTrip.estimated_budget}</Text>
+                    </View>
+                  )}
+                  
+                  {selectedFriendTrip.activities && selectedFriendTrip.activities.length > 0 && (
+                    <View style={styles.detailSection}>
+                      <View style={styles.detailRow}>
+                        <Ionicons name="list" size={20} color="#0fa3a3" />
+                        <Text style={styles.detailSectionTitle}>Activities</Text>
+                      </View>
+                      {selectedFriendTrip.activities.map((activity, index) => (
+                        <View key={index} style={styles.listItem}>
+                          <Text style={styles.bullet}>•</Text>
+                          <Text style={styles.listItemText}>{activity}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                  
+                  {selectedFriendTrip.hotels && selectedFriendTrip.hotels.length > 0 && (
+                    <View style={styles.detailSection}>
+                      <View style={styles.detailRow}>
+                        <Ionicons name="bed" size={20} color="#0fa3a3" />
+                        <Text style={styles.detailSectionTitle}>Hotels</Text>
+                      </View>
+                      {selectedFriendTrip.hotels.map((hotel, index) => (
+                        <View key={index} style={styles.listItem}>
+                          <Text style={styles.bullet}>•</Text>
+                          <Text style={styles.listItemText}>{hotel}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                  
+                  {selectedFriendTrip.restaurants && selectedFriendTrip.restaurants.length > 0 && (
+                    <View style={styles.detailSection}>
+                      <View style={styles.detailRow}>
+                        <Ionicons name="restaurant" size={20} color="#0fa3a3" />
+                        <Text style={styles.detailSectionTitle}>Restaurants</Text>
+                      </View>
+                      {selectedFriendTrip.restaurants.map((restaurant, index) => (
+                        <View key={index} style={styles.listItem}>
+                          <Text style={styles.bullet}>•</Text>
+                          <Text style={styles.listItemText}>{restaurant}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                  
+                  {selectedFriendTrip.flights && (
+                    <View style={styles.detailSection}>
+                      <View style={styles.detailRow}>
+                        <Ionicons name="airplane" size={20} color="#0fa3a3" />
+                        <Text style={styles.detailSectionTitle}>Flights</Text>
+                      </View>
+                      <Text style={styles.detailText}>{selectedFriendTrip.flights}</Text>
+                    </View>
+                  )}
+                  
+                  <View style={styles.detailActions}>
+                    <TouchableOpacity 
+                      style={[styles.detailButton, styles.editButton]}
+                      onPress={() => {
+                        Alert.alert('Edit Trip', `Edit your notes and preferences for "${selectedFriendTrip.tripTitle}"`);
+                      }}
+                    >
+                      <Ionicons name="create" size={20} color="#fff" />
+                      <Text style={styles.detailButtonText}>Edit</Text>
+                    </TouchableOpacity>
+                    
+                    {friends.some(f => f.userId === selectedFriendTrip.userId) ? (
+                      <TouchableOpacity 
+                        style={[styles.detailButton, { backgroundColor: '#ff4444' }]}
+                        onPress={() => {
+                          Alert.alert(
+                            'Leave Trip',
+                            `Are you sure you want to leave "${selectedFriendTrip.tripTitle}"?`,
+                            [
+                              { text: 'Cancel', style: 'cancel' },
+                              { 
+                                text: 'Leave', 
+                                style: 'destructive',
+                                onPress: () => {
+                                  updateState({ 
+                                    friends: friends.filter(f => f.userId !== selectedFriendTrip.userId),
+                                    showFriendDetailModal: false, 
+                                    selectedFriendTrip: null 
+                                  });
+                                  Alert.alert('Left Trip', `You have left "${selectedFriendTrip.tripTitle}"`);
+                                }
+                              }
+                            ]
+                          );
+                        }}
+                      >
+                        <Ionicons name="exit" size={20} color="#fff" />
+                        <Text style={styles.detailButtonText}>Leave Trip</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <TouchableOpacity 
+                        style={[
+                          styles.detailButton, 
+                          { backgroundColor: requestedTrips.has(selectedFriendTrip.userId) ? '#999' : '#22c55e' }
+                        ]}
+                        onPress={() => {
+                          if (!requestedTrips.has(selectedFriendTrip.userId)) {
+                            requestToJoin(selectedFriendTrip.userId);
+                          }
+                        }}
+                        disabled={requestedTrips.has(selectedFriendTrip.userId)}
+                      >
+                        <Ionicons 
+                          name={requestedTrips.has(selectedFriendTrip.userId) ? "checkmark-circle" : "add-circle"} 
+                          size={20} 
+                          color="#fff" 
+                        />
+                        <Text style={styles.detailButtonText}>
+                          {requestedTrips.has(selectedFriendTrip.userId) ? 'Requested' : 'Join Trip'}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </View>
+              </ScrollView>
+            ) : null}
           </View>
         </View>
       </Modal>
@@ -1470,5 +1826,29 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  detailText: {
+    fontSize: 15,
+    color: '#666',
+    marginTop: 8,
+    lineHeight: 22,
+  },
+  listItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginTop: 8,
+    paddingLeft: 8,
+  },
+  bullet: {
+    fontSize: 16,
+    color: '#0fa3a3',
+    marginRight: 8,
+    marginTop: 2,
+  },
+  listItemText: {
+    fontSize: 15,
+    color: '#666',
+    flex: 1,
+    lineHeight: 22,
   },
 });

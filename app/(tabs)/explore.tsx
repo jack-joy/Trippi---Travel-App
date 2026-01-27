@@ -1,10 +1,11 @@
-import React, { useRef, useState } from 'react';
-import { StyleSheet, View, TouchableOpacity, Text, Image, ScrollView, TextInput, Animated, PanResponder, LayoutChangeEvent } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, TextInput, Modal, Animated, Dimensions, Alert, FlatList, PanResponder, LayoutChangeEvent } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useFocusEffect } from '@react-navigation/native';
 import { router } from 'expo-router';
 
+const { width, height } = Dimensions.get('window');
 // Fallback avatar to avoid blanks
 const DEFAULT_AVATAR = 'https://images.unsplash.com/photo-1548142813-c348350df52b?q=80&w=200&auto=format&fit=crop';
 const Avatar = ({ uri, style }: { uri?: string; style: any }) => {
@@ -258,6 +259,12 @@ type UserProfile = {
   };
   travelStyle: string[];
   favoriteDestinations: string[];
+  currentTrip?: {
+    location: string;
+    startDate: string;
+    endDate: string;
+    emoji: string;
+  };
 };
 
 const userProfiles: Record<string, UserProfile> = {
@@ -284,6 +291,12 @@ const userProfiles: Record<string, UserProfile> = {
     stats: { countries: 18, continents: 4, trips: 42, followers: 5670, following: 423 },
     travelStyle: ['Food', 'Technology', 'Culture'],
     favoriteDestinations: ['Tokyo', 'Osaka', 'Kyoto'],
+    currentTrip: {
+      location: 'Kyoto, Japan',
+      startDate: 'Jan 22, 2026',
+      endDate: 'Jan 30, 2026',
+      emoji: '🍜'
+    },
   },
   sophie_travels: {
     name: 'Sophie Martin',
@@ -300,6 +313,12 @@ const userProfiles: Record<string, UserProfile> = {
     stats: { countries: 31, continents: 6, trips: 67, followers: 12500, following: 890 },
     travelStyle: ['Adventure', 'Beach', 'Wildlife'],
     favoriteDestinations: ['Sydney', 'Bali', 'Hawaii'],
+    currentTrip: {
+      location: 'Bali, Indonesia',
+      startDate: 'Jan 18, 2026',
+      endDate: 'Feb 2, 2026',
+      emoji: '🏄'
+    },
   },
   marco_explorer: {
     name: 'Marco Rossi',
@@ -428,8 +447,12 @@ type TripDetails = {
   startDate: string; // ISO
   endDate: string;   // ISO
   photos: string[];
-  restaurants: string[];
-  activities: string[];
+  restaurants: (string | { name: string; rating: number })[];
+  activities: (string | { name: string; rating: number })[];
+  hotels?: (string | { name: string; rating: number })[];
+  duration?: string;
+  budget?: string;
+  bestTime?: string;
   likes: number;
   comments: { id: string; user: string; text: string; timestamp: number }[];
 };
@@ -445,8 +468,23 @@ const tripData: Record<string, TripDetails> = {
       'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=800',
       'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800',
     ],
-    restaurants: ["Katz's Deli", "Joe's Pizza", 'Le Bernardin'],
-    activities: ['Central Park Bike', 'Top of the Rock', 'Brooklyn Bridge Walk'],
+    restaurants: [
+      { name: "Katz's Deli", rating: 9.2 },
+      { name: "Joe's Pizza", rating: 8.7 },
+      { name: 'Le Bernardin', rating: 9.8 }
+    ],
+    activities: [
+      { name: 'Central Park Bike', rating: 9.5 },
+      { name: 'Top of the Rock', rating: 9.2 },
+      { name: 'Brooklyn Bridge Walk', rating: 9.0 }
+    ],
+    hotels: [
+      { name: 'The Plaza Hotel', rating: 9.3 },
+      { name: 'The Standard', rating: 9.1 }
+    ],
+    duration: '7 days',
+    budget: '$2,500 - $3,500',
+    bestTime: 'Spring or Fall',
     likes: 24,
     comments: [
       { id: 'c1', user: 'maria', text: 'NYC looks amazing! 🗽', timestamp: Date.now() - 1000 * 60 * 25 },
@@ -460,8 +498,16 @@ const tripData: Record<string, TripDetails> = {
       'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800',
       'https://images.unsplash.com/photo-1470770903676-69b98201ea1c?w=800',
     ],
-    restaurants: ['Dishoom', 'Flat Iron', 'Padella'],
-    activities: ['London Eye', 'Thames Cruise', 'Borough Market'],
+    restaurants: [
+      { name: 'Dishoom', rating: 9.7 },
+      { name: 'Flat Iron', rating: 8.7 },
+      { name: 'Padella', rating: 9.7 }
+    ],
+    activities: [
+      { name: 'London Eye', rating: 8.0 },
+      { name: 'Thames Cruise', rating: 9.4 },
+      { name: 'Borough Market', rating: 7.6 }
+    ],
     likes: 12,
     comments: [
       { id: 'c2', user: 'ben', text: 'Save me a seat at Dishoom!', timestamp: Date.now() - 1000 * 60 * 60 * 3 },
@@ -475,8 +521,16 @@ const tripData: Record<string, TripDetails> = {
       'https://images.unsplash.com/photo-1472214103451-9374bd1c798e?w=800',
       'https://images.unsplash.com/photo-1470770841072-f978cf4d019e?w=800',
     ],
-    restaurants: ['Sukiyabashi Jiro', 'Ichiran Ramen', 'Sushi Dai'],
-    activities: ['Shibuya Crossing', 'Tsukiji Market', 'Asakusa Temple'],
+    restaurants: [
+      { name: 'Sukiyabashi Jiro', rating: 9.3 },
+      { name: 'Ichiran Ramen', rating: 7.8 },
+      { name: 'Sushi Dai', rating: 9.6 }
+    ],
+    activities: [
+      { name: 'Shibuya Crossing', rating: 8.9 },
+      { name: 'Tsukiji Market', rating: 7.7 },
+      { name: 'Asakusa Temple', rating: 9.7 }
+    ],
     likes: 33,
     comments: [
       { id: 'c3', user: 'sam', text: 'Tokyo food is the best 😍', timestamp: Date.now() - 1000 * 60 * 90 },
@@ -492,8 +546,17 @@ const tripData: Record<string, TripDetails> = {
       'https://images.unsplash.com/photo-1511739001486-6bfe10ce785f?w=800',
       'https://images.unsplash.com/photo-1499856871958-5b9627545d1a?w=800',
     ],
-    restaurants: ['Le Jules Verne', 'Septime', 'L\'Ami Jean'],
-    activities: ['Eiffel Tower', 'Louvre Museum', 'Seine River Cruise', 'Montmartre Walk'],
+    restaurants: [
+      { name: 'Le Jules Verne', rating: 9.7 },
+      { name: 'Septime', rating: 8.5 },
+      { name: "L'Ami Jean", rating: 7.6 }
+    ],
+    activities: [
+      { name: 'Eiffel Tower', rating: 9.2 },
+      { name: 'Louvre Museum', rating: 9.2 },
+      { name: 'Seine River Cruise', rating: 8.6 },
+      { name: 'Montmartre Walk', rating: 8.9 }
+    ],
     likes: 156,
     comments: [
       { id: 'c4', user: 'sarah', text: 'Paris is always a good idea! 🇫🇷', timestamp: Date.now() - 1000 * 60 * 45 },
@@ -510,8 +573,17 @@ const tripData: Record<string, TripDetails> = {
       'https://images.unsplash.com/photo-1542856204-00101eb6def4?w=800',
       'https://images.unsplash.com/photo-1518416177092-ec985e4d6c14?w=800',
     ],
-    restaurants: ['Nobu Malibu', 'Republique', 'Bestia'],
-    activities: ['Hollywood Sign Hike', 'Venice Beach', 'Getty Center', 'Rodeo Drive'],
+    restaurants: [
+      { name: 'Nobu Malibu', rating: 7.8 },
+      { name: 'Republique', rating: 8.3 },
+      { name: 'Bestia', rating: 7.9 }
+    ],
+    activities: [
+      { name: 'Hollywood Sign Hike', rating: 9.0 },
+      { name: 'Venice Beach', rating: 9.2 },
+      { name: 'Getty Center', rating: 8.1 },
+      { name: 'Rodeo Drive', rating: 8.8 }
+    ],
     likes: 2847,
     comments: [
       { id: 'c6', user: 'fan123', text: 'Love your LA content! ✨', timestamp: Date.now() - 1000 * 60 * 120 },
@@ -528,8 +600,17 @@ const tripData: Record<string, TripDetails> = {
       'https://images.unsplash.com/photo-1546412414-e1885259563a?w=800',
       'https://images.unsplash.com/photo-1582672060674-bc2bd808a8b5?w=800',
     ],
-    restaurants: ['At.mosphere', 'Zuma Dubai', 'Pierchic'],
-    activities: ['Burj Khalifa', 'Desert Safari', 'Dubai Mall', 'Palm Jumeirah'],
+    restaurants: [
+      { name: 'At.mosphere', rating: 9.5 },
+      { name: 'Zuma Dubai', rating: 9.9 },
+      { name: 'Pierchic', rating: 9.1 }
+    ],
+    activities: [
+      { name: 'Burj Khalifa', rating: 8.2 },
+      { name: 'Desert Safari', rating: 8.0 },
+      { name: 'Dubai Mall', rating: 8.1 },
+      { name: 'Palm Jumeirah', rating: 9.5 }
+    ],
     likes: 4521,
     comments: [
       { id: 'c9', user: 'luxury_life', text: 'Dubai is incredible! 🏙️', timestamp: Date.now() - 1000 * 60 * 200 },
@@ -546,8 +627,17 @@ const tripData: Record<string, TripDetails> = {
       'https://images.unsplash.com/photo-1499856871958-5b9627545d1a?w=800',
       'https://images.unsplash.com/photo-1431274172761-fca41d930114?w=800',
     ],
-    restaurants: ['Le Jules Verne', 'L\'Ami Jean', 'Septime'],
-    activities: ['Eiffel Tower', 'Louvre Museum', 'Seine River Cruise', 'Montmartre Walk'],
+    restaurants: [
+      { name: 'Le Jules Verne', rating: 8.2 },
+      { name: "L'Ami Jean", rating: 8.6 },
+      { name: 'Septime', rating: 8.1 }
+    ],
+    activities: [
+      { name: 'Eiffel Tower', rating: 9.0 },
+      { name: 'Louvre Museum', rating: 9.2 },
+      { name: 'Seine River Cruise', rating: 9.7 },
+      { name: 'Montmartre Walk', rating: 8.5 }
+    ],
     likes: 45,
     comments: [
       { id: 'c12', user: 'emma', text: 'Paris is always a good idea! 🗼', timestamp: Date.now() - 1000 * 60 * 120 },
@@ -562,8 +652,16 @@ const tripData: Record<string, TripDetails> = {
       'https://images.unsplash.com/photo-1523482580672-f109ba8cb9be?w=800',
       'https://images.unsplash.com/photo-1549180030-48bf079fb38a?w=800',
     ],
-    restaurants: ['Quay', 'Bennelong', 'Aria Restaurant'],
-    activities: ['Opera House Tour', 'Bondi Beach', 'Harbour Bridge Climb'],
+    restaurants: [
+      { name: 'Quay', rating: 7.9 },
+      { name: 'Bennelong', rating: 7.7 },
+      { name: 'Aria Restaurant', rating: 8.8 }
+    ],
+    activities: [
+      { name: 'Opera House Tour', rating: 8.6 },
+      { name: 'Bondi Beach', rating: 9.6 },
+      { name: 'Harbour Bridge Climb', rating: 7.9 }
+    ],
     likes: 38,
     comments: [
       { id: 'c14', user: 'olivia', text: 'Bondi looks incredible! 🏖️', timestamp: Date.now() - 1000 * 60 * 150 },
@@ -578,8 +676,17 @@ const tripData: Record<string, TripDetails> = {
       'https://images.unsplash.com/photo-1525874684015-58379d421a52?w=800',
       'https://images.unsplash.com/photo-1529260830199-42c24126f198?w=800',
     ],
-    restaurants: ['La Pergola', 'Roscioli', 'Trattoria Da Enzo'],
-    activities: ['Colosseum Tour', 'Vatican Museums', 'Trevi Fountain', 'Roman Forum'],
+    restaurants: [
+      { name: 'La Pergola', rating: 8.0 },
+      { name: 'Roscioli', rating: 9.2 },
+      { name: 'Trattoria Da Enzo', rating: 9.4 }
+    ],
+    activities: [
+      { name: 'Colosseum Tour', rating: 9.8 },
+      { name: 'Vatican Museums', rating: 9.4 },
+      { name: 'Trevi Fountain', rating: 8.0 },
+      { name: 'Roman Forum', rating: 8.2 }
+    ],
     likes: 52,
     comments: [
       { id: 'c15', user: 'isabella', text: 'When in Rome! 🏛️', timestamp: Date.now() - 1000 * 60 * 200 },
@@ -594,8 +701,17 @@ const tripData: Record<string, TripDetails> = {
       'https://images.unsplash.com/photo-1547448415-e9f5b28e570d?w=800',
       'https://images.unsplash.com/photo-1520106212299-d99c443e4568?w=800',
     ],
-    restaurants: ['White Rabbit', 'Café Pushkin', 'Twins Garden'],
-    activities: ['Red Square', 'Kremlin Tour', 'Bolshoi Theatre', 'Metro Tour'],
+    restaurants: [
+      { name: 'White Rabbit', rating: 8.7 },
+      { name: 'Café Pushkin', rating: 9.9 },
+      { name: 'Twins Garden', rating: 9.8 }
+    ],
+    activities: [
+      { name: 'Red Square', rating: 9.5 },
+      { name: 'Kremlin Tour', rating: 8.7 },
+      { name: 'Bolshoi Theatre', rating: 9.6 },
+      { name: 'Metro Tour', rating: 9.1 }
+    ],
     likes: 29,
     comments: [
       { id: 'c17', user: 'dmitri', text: 'Beautiful architecture! 🏰', timestamp: Date.now() - 1000 * 60 * 100 },
@@ -610,8 +726,17 @@ const tripData: Record<string, TripDetails> = {
       'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=800',
       'https://images.unsplash.com/photo-1582672060674-bc2bd808a8b5?w=800',
     ],
-    restaurants: ['At.mosphere', 'Pierchic', 'Zuma Dubai'],
-    activities: ['Burj Khalifa', 'Desert Safari', 'Dubai Mall', 'Palm Jumeirah'],
+    restaurants: [
+      { name: 'At.mosphere', rating: 8.0 },
+      { name: 'Pierchic', rating: 8.3 },
+      { name: 'Zuma Dubai', rating: 7.8 }
+    ],
+    activities: [
+      { name: 'Burj Khalifa', rating: 9.1 },
+      { name: 'Desert Safari', rating: 7.7 },
+      { name: 'Dubai Mall', rating: 8.2 },
+      { name: 'Palm Jumeirah', rating: 7.9 }
+    ],
     likes: 67,
     comments: [
       { id: 'c18', user: 'sarah', text: 'Luxury at its finest! ✨', timestamp: Date.now() - 1000 * 60 * 240 },
@@ -626,8 +751,17 @@ const tripData: Record<string, TripDetails> = {
       'https://images.unsplash.com/photo-1516306580123-e6e52b1b7b5f?w=800',
       'https://images.unsplash.com/photo-1544989164-fb6d42bd3e3b?w=800',
     ],
-    restaurants: ['Oro', 'Aprazível', 'Marius Degustare'],
-    activities: ['Christ the Redeemer', 'Sugarloaf Mountain', 'Copacabana Beach', 'Samba Show'],
+    restaurants: [
+      { name: 'Oro', rating: 8.9 },
+      { name: 'Aprazível', rating: 8.3 },
+      { name: 'Marius Degustare', rating: 7.8 }
+    ],
+    activities: [
+      { name: 'Christ the Redeemer', rating: 9.2 },
+      { name: 'Sugarloaf Mountain', rating: 7.9 },
+      { name: 'Copacabana Beach', rating: 9.2 },
+      { name: 'Samba Show', rating: 9.8 }
+    ],
     likes: 41,
     comments: [
       { id: 'c20', user: 'carlos', text: 'Rio is pure energy! 🎉', timestamp: Date.now() - 1000 * 60 * 300 },
@@ -641,8 +775,17 @@ const tripData: Record<string, TripDetails> = {
       'https://images.unsplash.com/photo-1508964942454-1a56651d54ac?w=800',
       'https://images.unsplash.com/photo-1565967511849-76a60a516170?w=800',
     ],
-    restaurants: ['Odette', 'Burnt Ends', 'Hawker Chan'],
-    activities: ['Marina Bay Sands', 'Gardens by the Bay', 'Sentosa Island', 'Clarke Quay'],
+    restaurants: [
+      { name: 'Odette', rating: 8.7 },
+      { name: 'Burnt Ends', rating: 9.8 },
+      { name: 'Hawker Chan', rating: 8.5 }
+    ],
+    activities: [
+      { name: 'Marina Bay Sands', rating: 9.2 },
+      { name: 'Gardens by the Bay', rating: 8.8 },
+      { name: 'Sentosa Island', rating: 7.7 },
+      { name: 'Clarke Quay', rating: 9.1 }
+    ],
     likes: 35,
     comments: [
       { id: 'c21', user: 'wei', text: 'Singapore is so clean! 🌆', timestamp: Date.now() - 1000 * 60 * 140 },
@@ -657,8 +800,17 @@ const tripData: Record<string, TripDetails> = {
       'https://images.unsplash.com/photo-1568402102990-bc541580b59f?w=800',
       'https://images.unsplash.com/photo-1512813498716-3e640fed3f39?w=800',
     ],
-    restaurants: ['Pujol', 'Quintonil', 'Contramar'],
-    activities: ['Teotihuacan Pyramids', 'Frida Kahlo Museum', 'Xochimilco', 'Chapultepec Castle'],
+    restaurants: [
+      { name: 'Pujol', rating: 7.6 },
+      { name: 'Quintonil', rating: 8.9 },
+      { name: 'Contramar', rating: 8.5 }
+    ],
+    activities: [
+      { name: 'Teotihuacan Pyramids', rating: 9.0 },
+      { name: 'Frida Kahlo Museum', rating: 9.3 },
+      { name: 'Xochimilco', rating: 8.0 },
+      { name: 'Chapultepec Castle', rating: 7.7 }
+    ],
     likes: 48,
     comments: [
       { id: 'c22', user: 'maria', text: 'Tacos for life! 🌮', timestamp: Date.now() - 1000 * 60 * 160 },
@@ -673,8 +825,17 @@ const tripData: Record<string, TripDetails> = {
       'https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=800',
       'https://images.unsplash.com/photo-1563492065599-3520f775eeed?w=800',
     ],
-    restaurants: ['Gaggan', 'Jay Fai', 'Bo.lan'],
-    activities: ['Grand Palace', 'Floating Market', 'Wat Pho', 'Chatuchak Market'],
+    restaurants: [
+      { name: 'Gaggan', rating: 8.4 },
+      { name: 'Jay Fai', rating: 8.9 },
+      { name: 'Bo.lan', rating: 9.9 }
+    ],
+    activities: [
+      { name: 'Grand Palace', rating: 8.2 },
+      { name: 'Floating Market', rating: 9.5 },
+      { name: 'Wat Pho', rating: 9.8 },
+      { name: 'Chatuchak Market', rating: 9.9 }
+    ],
     likes: 56,
     comments: [
       { id: 'c24', user: 'tom', text: 'Street food heaven! 🍜', timestamp: Date.now() - 1000 * 60 * 180 },
@@ -689,8 +850,17 @@ const tripData: Record<string, TripDetails> = {
       'https://images.unsplash.com/photo-1600298881974-6be191ceeda1?w=800',
       'https://images.unsplash.com/photo-1582555172866-f73bb12a2ab3?w=800',
     ],
-    restaurants: ['Don Julio', 'La Cabrera', 'Sarkis'],
-    activities: ['Tango Show', 'La Boca', 'Recoleta Cemetery', 'San Telmo Market'],
+    restaurants: [
+      { name: 'Don Julio', rating: 7.9 },
+      { name: 'La Cabrera', rating: 8.3 },
+      { name: 'Sarkis', rating: 8.0 }
+    ],
+    activities: [
+      { name: 'Tango Show', rating: 7.8 },
+      { name: 'La Boca', rating: 7.6 },
+      { name: 'Recoleta Cemetery', rating: 8.3 },
+      { name: 'San Telmo Market', rating: 9.1 }
+    ],
     likes: 39,
     comments: [
       { id: 'c26', user: 'pablo', text: 'Tango is life! 💃', timestamp: Date.now() - 1000 * 60 * 200 },
@@ -704,8 +874,17 @@ const tripData: Record<string, TripDetails> = {
       'https://images.unsplash.com/photo-1506146332389-18140dc7b2fb?w=800',
       'https://images.unsplash.com/photo-1449034446853-66c86144b0ad?w=800',
     ],
-    restaurants: ['State Bird Provisions', 'Tartine', 'Zuni Café'],
-    activities: ['Golden Gate Bridge', 'Alcatraz', 'Cable Car Ride', 'Fisherman\'s Wharf'],
+    restaurants: [
+      { name: 'State Bird Provisions', rating: 7.8 },
+      { name: 'Tartine', rating: 7.7 },
+      { name: 'Zuni Café', rating: 8.2 }
+    ],
+    activities: [
+      { name: 'Golden Gate Bridge', rating: 8.2 },
+      { name: 'Alcatraz', rating: 7.8 },
+      { name: 'Cable Car Ride', rating: 8.9 },
+      { name: "Fisherman's Wharf", rating: 7.6 }
+    ],
     likes: 44,
     comments: [
       { id: 'c27', user: 'steve', text: 'SF never gets old! 🌉', timestamp: Date.now() - 1000 * 60 * 250 },
@@ -719,8 +898,17 @@ const tripData: Record<string, TripDetails> = {
       'https://images.unsplash.com/photo-1528728329032-2972f65dfb3f?w=800',
       'https://images.unsplash.com/photo-1599946347371-68eb71b16afc?w=800',
     ],
-    restaurants: ['Nobelhart & Schmutzig', 'Katz Orange', 'Curry 36'],
-    activities: ['Brandenburg Gate', 'Berlin Wall', 'Museum Island', 'Reichstag'],
+    restaurants: [
+      { name: 'Nobelhart & Schmutzig', rating: 7.6 },
+      { name: 'Katz Orange', rating: 8.8 },
+      { name: 'Curry 36', rating: 9.4 }
+    ],
+    activities: [
+      { name: 'Brandenburg Gate', rating: 8.6 },
+      { name: 'Berlin Wall', rating: 9.3 },
+      { name: 'Museum Island', rating: 9.6 },
+      { name: 'Reichstag', rating: 9.1 }
+    ],
     likes: 31,
     comments: [
       { id: 'c28', user: 'hans', text: 'History everywhere! 🏛️', timestamp: Date.now() - 1000 * 60 * 170 },
@@ -735,8 +923,17 @@ const tripData: Record<string, TripDetails> = {
       'https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?w=800',
       'https://images.unsplash.com/photo-1537890992424-3044f2bc6d0e?w=800',
     ],
-    restaurants: ['TRB Hutong', 'Da Dong', 'Jing Yaa Tang'],
-    activities: ['Great Wall', 'Forbidden City', 'Temple of Heaven', 'Summer Palace'],
+    restaurants: [
+      { name: 'TRB Hutong', rating: 9.3 },
+      { name: 'Da Dong', rating: 9.4 },
+      { name: 'Jing Yaa Tang', rating: 9.0 }
+    ],
+    activities: [
+      { name: 'Great Wall', rating: 8.0 },
+      { name: 'Forbidden City', rating: 7.5 },
+      { name: 'Temple of Heaven', rating: 7.8 },
+      { name: 'Summer Palace', rating: 8.6 }
+    ],
     likes: 61,
     comments: [
       { id: 'c29', user: 'li', text: 'The Great Wall is magnificent! 🏯', timestamp: Date.now() - 1000 * 60 * 190 },
@@ -751,8 +948,17 @@ const tripData: Record<string, TripDetails> = {
       'https://images.unsplash.com/photo-1572252009286-268acec5ca0a?w=800',
       'https://images.unsplash.com/photo-1553913861-c0fddf2619ee?w=800',
     ],
-    restaurants: ['Sequoia', 'Abou El Sid', 'Zooba'],
-    activities: ['Pyramids of Giza', 'Egyptian Museum', 'Nile Cruise', 'Khan el-Khalili'],
+    restaurants: [
+      { name: 'Sequoia', rating: 7.7 },
+      { name: 'Abou El Sid', rating: 9.1 },
+      { name: 'Zooba', rating: 9.8 }
+    ],
+    activities: [
+      { name: 'Pyramids of Giza', rating: 9.4 },
+      { name: 'Egyptian Museum', rating: 9.3 },
+      { name: 'Nile Cruise', rating: 8.4 },
+      { name: 'Khan el-Khalili', rating: 8.5 }
+    ],
     likes: 73,
     comments: [
       { id: 'c31', user: 'amira', text: 'Ancient wonders! 🐫', timestamp: Date.now() - 1000 * 60 * 280 },
@@ -767,8 +973,17 @@ const tripData: Record<string, TripDetails> = {
       'https://images.unsplash.com/photo-1601439678777-b2b3c56fa627?w=800',
       'https://images.unsplash.com/photo-1583422409516-2895a77efded?w=800',
     ],
-    restaurants: ['Maaemo', 'Kontrast', 'Vippa Food Hall'],
-    activities: ['Viking Ship Museum', 'Opera House', 'Vigeland Park', 'Fjord Cruise'],
+    restaurants: [
+      { name: 'Maaemo', rating: 8.3 },
+      { name: 'Kontrast', rating: 8.6 },
+      { name: 'Vippa Food Hall', rating: 9.6 }
+    ],
+    activities: [
+      { name: 'Viking Ship Museum', rating: 7.8 },
+      { name: 'Opera House', rating: 9.1 },
+      { name: 'Vigeland Park', rating: 9.7 },
+      { name: 'Fjord Cruise', rating: 8.1 }
+    ],
     likes: 27,
     comments: [
       { id: 'c33', user: 'erik', text: 'Norway is stunning! 🏔️', timestamp: Date.now() - 1000 * 60 * 130 },
@@ -783,8 +998,17 @@ const tripData: Record<string, TripDetails> = {
       'https://images.unsplash.com/photo-1547471080-7cc2caa01a7e?w=800',
       'https://images.unsplash.com/photo-1535083783855-76ae62b2914e?w=800',
     ],
-    restaurants: ['Carnivore', 'Talisman', 'The Talisman'],
-    activities: ['Nairobi National Park', 'Giraffe Centre', 'David Sheldrick Elephant Orphanage', 'Maasai Market'],
+    restaurants: [
+      { name: 'Carnivore', rating: 9.0 },
+      { name: 'Talisman', rating: 8.0 },
+      { name: 'The Talisman', rating: 7.7 }
+    ],
+    activities: [
+      { name: 'Nairobi National Park', rating: 8.9 },
+      { name: 'Giraffe Centre', rating: 9.6 },
+      { name: 'David Sheldrick Elephant Orphanage', rating: 8.1 },
+      { name: 'Maasai Market', rating: 9.8 }
+    ],
     likes: 85,
     comments: [
       { id: 'c34', user: 'jabari', text: 'Wildlife paradise! 🦁', timestamp: Date.now() - 1000 * 60 * 210 },
@@ -799,8 +1023,17 @@ const tripData: Record<string, TripDetails> = {
       'https://images.unsplash.com/photo-1517935706615-2717063c2225?w=800',
       'https://images.unsplash.com/photo-1565084888279-aca607ecce0c?w=800',
     ],
-    restaurants: ['Atelier', 'Beckta', 'Play Food & Wine'],
-    activities: ['Parliament Hill', 'Rideau Canal', 'ByWard Market', 'Canadian Museum of History'],
+    restaurants: [
+      { name: 'Atelier', rating: 8.8 },
+      { name: 'Beckta', rating: 9.1 },
+      { name: 'Play Food & Wine', rating: 9.7 }
+    ],
+    activities: [
+      { name: 'Parliament Hill', rating: 9.1 },
+      { name: 'Rideau Canal', rating: 9.7 },
+      { name: 'ByWard Market', rating: 8.9 },
+      { name: 'Canadian Museum of History', rating: 7.7 }
+    ],
     likes: 22,
     comments: [
       { id: 'c36', user: 'emma', text: 'Canada is beautiful! 🍁', timestamp: Date.now() - 1000 * 60 * 150 },
@@ -814,8 +1047,17 @@ const tripData: Record<string, TripDetails> = {
       'https://images.unsplash.com/photo-1558642452-9d2a7deb7f62?w=800',
       'https://images.unsplash.com/photo-1543783207-ec64e4d95325?w=800',
     ],
-    restaurants: ['DiverXO', 'Botín', 'Mercado de San Miguel'],
-    activities: ['Prado Museum', 'Royal Palace', 'Retiro Park', 'Flamenco Show'],
+    restaurants: [
+      { name: 'DiverXO', rating: 9.5 },
+      { name: 'Botín', rating: 7.7 },
+      { name: 'Mercado de San Miguel', rating: 8.9 }
+    ],
+    activities: [
+      { name: 'Prado Museum', rating: 9.0 },
+      { name: 'Royal Palace', rating: 7.5 },
+      { name: 'Retiro Park', rating: 7.6 },
+      { name: 'Flamenco Show', rating: 8.9 }
+    ],
     likes: 3420,
     comments: [
       { id: 'c37', user: 'maria', text: 'Madrid es increíble! 🇪🇸', timestamp: Date.now() - 1000 * 60 * 180 },
@@ -831,8 +1073,17 @@ const tripData: Record<string, TripDetails> = {
       'https://images.unsplash.com/photo-1547471080-7cc2caa01a7e?w=800',
       'https://images.unsplash.com/photo-1535083783855-76ae62b2914e?w=800',
     ],
-    restaurants: ['Carnivore Restaurant', 'Talisman', 'Mama Oliech'],
-    activities: ['Safari Game Drive', 'Giraffe Centre', 'Elephant Orphanage', 'Maasai Village'],
+    restaurants: [
+      { name: 'Carnivore Restaurant', rating: 8.1 },
+      { name: 'Talisman', rating: 9.7 },
+      { name: 'Mama Oliech', rating: 9.6 }
+    ],
+    activities: [
+      { name: 'Safari Game Drive', rating: 8.2 },
+      { name: 'Giraffe Centre', rating: 7.8 },
+      { name: 'Elephant Orphanage', rating: 8.3 },
+      { name: 'Maasai Village', rating: 8.9 }
+    ],
     likes: 8760,
     comments: [
       { id: 'c39', user: 'nature_lover', text: 'The Big Five! 🦁🐘🦏', timestamp: Date.now() - 1000 * 60 * 220 },
@@ -847,8 +1098,17 @@ const tripData: Record<string, TripDetails> = {
       'https://images.unsplash.com/photo-1531366936337-7c912a4589a7?w=800',
       'https://images.unsplash.com/photo-1483347756197-71ef80e95f73?w=800',
     ],
-    restaurants: ['Dill Restaurant', 'Grillmarkaðurinn', 'Bæjarins Beztu Pylsur'],
-    activities: ['Northern Lights Tour', 'Blue Lagoon', 'Golden Circle', 'Ice Cave'],
+    restaurants: [
+      { name: 'Dill Restaurant', rating: 8.3 },
+      { name: 'Grillmarkaðurinn', rating: 7.6 },
+      { name: 'Bæjarins Beztu Pylsur', rating: 8.2 }
+    ],
+    activities: [
+      { name: 'Northern Lights Tour', rating: 9.3 },
+      { name: 'Blue Lagoon', rating: 9.1 },
+      { name: 'Golden Circle', rating: 9.2 },
+      { name: 'Ice Cave', rating: 8.9 }
+    ],
     likes: 6890,
     comments: [
       { id: 'c41', user: 'aurora_fan', text: 'The lights are magical! 🌌', timestamp: Date.now() - 1000 * 60 * 260 },
@@ -862,8 +1122,17 @@ const tripData: Record<string, TripDetails> = {
       'https://images.unsplash.com/photo-1526392060635-9d6019884377?w=800',
       'https://images.unsplash.com/photo-1580837119756-563d608dd119?w=800',
     ],
-    restaurants: ['Central', 'Cicciolina', 'Café Inkaterra'],
-    activities: ['Machu Picchu Trek', 'Sacred Valley', 'Inca Trail', 'Rainbow Mountain'],
+    restaurants: [
+      { name: 'Central', rating: 8.9 },
+      { name: 'Cicciolina', rating: 9.6 },
+      { name: 'Café Inkaterra', rating: 9.8 }
+    ],
+    activities: [
+      { name: 'Machu Picchu Trek', rating: 9.8 },
+      { name: 'Sacred Valley', rating: 9.7 },
+      { name: 'Inca Trail', rating: 7.6 },
+      { name: 'Rainbow Mountain', rating: 7.8 }
+    ],
     likes: 9340,
     comments: [
       { id: 'c42', user: 'hiker', text: 'Worth every step! 🏔️', timestamp: Date.now() - 1000 * 60 * 200 },
@@ -878,8 +1147,17 @@ const tripData: Record<string, TripDetails> = {
       'https://images.unsplash.com/photo-1603565816030-6b389eeb23cb?w=800',
       'https://images.unsplash.com/photo-1601581987809-a874a81309c9?w=800',
     ],
-    restaurants: ['Funky Gourmet', 'Spondi', 'Varoulko Seaside'],
-    activities: ['Acropolis', 'Parthenon', 'Ancient Agora', 'Temple of Zeus'],
+    restaurants: [
+      { name: 'Funky Gourmet', rating: 8.8 },
+      { name: 'Spondi', rating: 9.3 },
+      { name: 'Varoulko Seaside', rating: 7.8 }
+    ],
+    activities: [
+      { name: 'Acropolis', rating: 8.9 },
+      { name: 'Parthenon', rating: 8.0 },
+      { name: 'Ancient Agora', rating: 9.7 },
+      { name: 'Temple of Zeus', rating: 8.3 }
+    ],
     likes: 4560,
     comments: [
       { id: 'c44', user: 'history_buff', text: 'Ancient wonders! 🏛️', timestamp: Date.now() - 1000 * 60 * 170 },
@@ -893,8 +1171,17 @@ const tripData: Record<string, TripDetails> = {
       'https://images.unsplash.com/photo-1600298881974-6be191ceeda1?w=800',
       'https://images.unsplash.com/photo-1582555172866-f73bb12a2ab3?w=800',
     ],
-    restaurants: ['Don Julio', 'La Cabrera', 'Elena'],
-    activities: ['Tango Show', 'La Boca', 'Recoleta Cemetery', 'Teatro Colón'],
+    restaurants: [
+      { name: 'Don Julio', rating: 8.7 },
+      { name: 'La Cabrera', rating: 8.1 },
+      { name: 'Elena', rating: 9.2 }
+    ],
+    activities: [
+      { name: 'Tango Show', rating: 7.9 },
+      { name: 'La Boca', rating: 9.4 },
+      { name: 'Recoleta Cemetery', rating: 9.4 },
+      { name: 'Teatro Colón', rating: 8.6 }
+    ],
     likes: 5670,
     comments: [
       { id: 'c45', user: 'dancer', text: 'Tango paradise! 💃', timestamp: Date.now() - 1000 * 60 * 210 },
@@ -908,8 +1195,17 @@ const tripData: Record<string, TripDetails> = {
       'https://images.unsplash.com/photo-1587474260584-136574528ed5?w=800',
       'https://images.unsplash.com/photo-1548013146-72479768bada?w=800',
     ],
-    restaurants: ['Peshawri', 'Esphahan', 'Pinch of Spice'],
-    activities: ['Taj Mahal Visit', 'Agra Fort', 'Fatehpur Sikri', 'Mehtab Bagh'],
+    restaurants: [
+      { name: 'Peshawri', rating: 7.8 },
+      { name: 'Esphahan', rating: 9.1 },
+      { name: 'Pinch of Spice', rating: 9.0 }
+    ],
+    activities: [
+      { name: 'Taj Mahal Visit', rating: 8.9 },
+      { name: 'Agra Fort', rating: 9.5 },
+      { name: 'Fatehpur Sikri', rating: 9.6 },
+      { name: 'Mehtab Bagh', rating: 8.8 }
+    ],
     likes: 7890,
     comments: [
       { id: 'c46', user: 'india_fan', text: 'Monument of love! 🕌', timestamp: Date.now() - 1000 * 60 * 240 },
@@ -924,8 +1220,17 @@ const tripData: Record<string, TripDetails> = {
       'https://images.unsplash.com/photo-1570459027562-4a916cc6113f?w=800',
       'https://images.unsplash.com/photo-1576675784201-9710bcb1c1d0?w=800',
     ],
-    restaurants: ['Houtou Fudou', 'Yoshida Udon', 'Lake View Restaurant'],
-    activities: ['Mt. Fuji Climb', 'Lake Kawaguchi', 'Chureito Pagoda', 'Oshino Hakkai'],
+    restaurants: [
+      { name: 'Houtou Fudou', rating: 9.6 },
+      { name: 'Yoshida Udon', rating: 7.7 },
+      { name: 'Lake View Restaurant', rating: 9.1 }
+    ],
+    activities: [
+      { name: 'Mt. Fuji Climb', rating: 8.9 },
+      { name: 'Lake Kawaguchi', rating: 9.2 },
+      { name: 'Chureito Pagoda', rating: 8.7 },
+      { name: 'Oshino Hakkai', rating: 8.4 }
+    ],
     likes: 6230,
     comments: [
       { id: 'c48', user: 'japan_lover', text: 'Iconic Japan! 🗻', timestamp: Date.now() - 1000 * 60 * 190 },
@@ -939,8 +1244,17 @@ const tripData: Record<string, TripDetails> = {
       'https://images.unsplash.com/photo-1557603640-26d6aa1e2b3b?w=800',
       'https://images.unsplash.com/photo-1516483638261-f4dbaf036963?w=800',
     ],
-    restaurants: ['Enoteca Pinchiorri', 'Trattoria Mario', 'All\'Antico Vinaio'],
-    activities: ['Uffizi Gallery', 'Duomo', 'Ponte Vecchio', 'Michelangelo\'s David'],
+    restaurants: [
+      { name: 'Enoteca Pinchiorri', rating: 7.7 },
+      { name: 'Trattoria Mario', rating: 7.9 },
+      { name: "All'Antico Vinaio", rating: 9.6 }
+    ],
+    activities: [
+      { name: 'Uffizi Gallery', rating: 7.9 },
+      { name: 'Duomo', rating: 9.3 },
+      { name: 'Ponte Vecchio', rating: 8.8 },
+      { name: "Michelangelo's David", rating: 8.6 }
+    ],
     likes: 5430,
     comments: [
       { id: 'c49', user: 'art_fan', text: 'Renaissance beauty! 🎨', timestamp: Date.now() - 1000 * 60 * 160 },
@@ -954,8 +1268,17 @@ const tripData: Record<string, TripDetails> = {
       'https://images.unsplash.com/photo-1601439678777-b2b3c56fa627?w=800',
       'https://images.unsplash.com/photo-1583422409516-2895a77efded?w=800',
     ],
-    restaurants: ['Maaemo', 'Kontrast', 'Lysverket'],
-    activities: ['Fjord Cruise', 'Viking Ship Museum', 'Vigeland Park', 'Opera House'],
+    restaurants: [
+      { name: 'Maaemo', rating: 7.5 },
+      { name: 'Kontrast', rating: 9.4 },
+      { name: 'Lysverket', rating: 7.6 }
+    ],
+    activities: [
+      { name: 'Fjord Cruise', rating: 9.4 },
+      { name: 'Viking Ship Museum', rating: 8.9 },
+      { name: 'Vigeland Park', rating: 9.0 },
+      { name: 'Opera House', rating: 8.5 }
+    ],
     likes: 4890,
     comments: [
       { id: 'c50', user: 'fjord_lover', text: 'Stunning fjords! ⛰️', timestamp: Date.now() - 1000 * 60 * 150 },
@@ -969,8 +1292,17 @@ const tripData: Record<string, TripDetails> = {
       'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=800',
       'https://images.unsplash.com/photo-1580674285054-bed31e145f59?w=800',
     ],
-    restaurants: ['Tim Ho Wan', 'Lung King Heen', 'Yardbird'],
-    activities: ['Victoria Peak', 'Star Ferry', 'Temple Street Market', 'Big Buddha'],
+    restaurants: [
+      { name: 'Tim Ho Wan', rating: 7.6 },
+      { name: 'Lung King Heen', rating: 9.8 },
+      { name: 'Yardbird', rating: 8.7 }
+    ],
+    activities: [
+      { name: 'Victoria Peak', rating: 8.4 },
+      { name: 'Star Ferry', rating: 7.8 },
+      { name: 'Temple Street Market', rating: 9.4 },
+      { name: 'Big Buddha', rating: 7.7 }
+    ],
     likes: 7120,
     comments: [
       { id: 'c51', user: 'city_fan', text: 'Skyline goals! 🏙️', timestamp: Date.now() - 1000 * 60 * 200 },
@@ -984,8 +1316,17 @@ const tripData: Record<string, TripDetails> = {
       'https://images.unsplash.com/photo-1580060839134-75a5edca2e99?w=800',
       'https://images.unsplash.com/photo-1577948000111-9c970dfe3743?w=800',
     ],
-    restaurants: ['La Madeleine', 'Crawdaddy\'s', 'The Blue Crane'],
-    activities: ['Kruger Safari', 'Union Buildings', 'Voortrekker Monument', 'Pretoria Zoo'],
+    restaurants: [
+      { name: 'La Madeleine', rating: 8.6 },
+      { name: "Crawdaddy's", rating: 8.3 },
+      { name: 'The Blue Crane', rating: 8.4 }
+    ],
+    activities: [
+      { name: 'Kruger Safari', rating: 7.6 },
+      { name: 'Union Buildings', rating: 8.0 },
+      { name: 'Voortrekker Monument', rating: 8.7 },
+      { name: 'Pretoria Zoo', rating: 8.5 }
+    ],
     likes: 3890,
     comments: [
       { id: 'c52', user: 'safari_lover', text: 'Wildlife paradise! 🦒', timestamp: Date.now() - 1000 * 60 * 180 },
@@ -999,8 +1340,17 @@ const tripData: Record<string, TripDetails> = {
       'https://images.unsplash.com/photo-1600298881974-6be191ceeda1?w=800',
       'https://images.unsplash.com/photo-1506146332389-18140dc7b2fb?w=800',
     ],
-    restaurants: ['Miku', 'Hawksworth', 'Chambar'],
-    activities: ['Stanley Park', 'Capilano Bridge', 'Granville Island', 'Grouse Mountain'],
+    restaurants: [
+      { name: 'Miku', rating: 8.1 },
+      { name: 'Hawksworth', rating: 8.4 },
+      { name: 'Chambar', rating: 7.9 }
+    ],
+    activities: [
+      { name: 'Stanley Park', rating: 8.0 },
+      { name: 'Capilano Bridge', rating: 9.5 },
+      { name: 'Granville Island', rating: 8.4 },
+      { name: 'Grouse Mountain', rating: 9.5 }
+    ],
     likes: 4560,
     comments: [
       { id: 'c53', user: 'canada_fan', text: 'Beautiful BC! 🏔️', timestamp: Date.now() - 1000 * 60 * 170 },
@@ -1014,8 +1364,17 @@ const tripData: Record<string, TripDetails> = {
       'https://images.unsplash.com/photo-1572252009286-268acec5ca0a?w=800',
       'https://images.unsplash.com/photo-1553913861-c0fddf2619ee?w=800',
     ],
-    restaurants: ['Sequoia', 'Abou El Sid', 'Zooba'],
-    activities: ['Pyramids of Giza', 'Sphinx', 'Egyptian Museum', 'Khan el-Khalili'],
+    restaurants: [
+      { name: 'Sequoia', rating: 8.8 },
+      { name: 'Abou El Sid', rating: 9.0 },
+      { name: 'Zooba', rating: 8.6 }
+    ],
+    activities: [
+      { name: 'Pyramids of Giza', rating: 8.3 },
+      { name: 'Sphinx', rating: 9.4 },
+      { name: 'Egyptian Museum', rating: 8.1 },
+      { name: 'Khan el-Khalili', rating: 9.8 }
+    ],
     likes: 8230,
     comments: [
       { id: 'c54', user: 'egypt_fan', text: 'Ancient wonders! 🐫', timestamp: Date.now() - 1000 * 60 * 250 },
@@ -1030,8 +1389,17 @@ const tripData: Record<string, TripDetails> = {
       'https://images.unsplash.com/photo-1592906209472-a36b1f3782ef?w=800',
       'https://images.unsplash.com/photo-1587974928442-77dc3e0dba72?w=800',
     ],
-    restaurants: ['Lokál', 'U Fleků', 'Café Savoy'],
-    activities: ['Charles Bridge', 'Prague Castle', 'Old Town Square', 'Astronomical Clock'],
+    restaurants: [
+      { name: 'Lokál', rating: 8.2 },
+      { name: 'U Fleků', rating: 8.1 },
+      { name: 'Café Savoy', rating: 8.0 }
+    ],
+    activities: [
+      { name: 'Charles Bridge', rating: 8.8 },
+      { name: 'Prague Castle', rating: 7.6 },
+      { name: 'Old Town Square', rating: 9.5 },
+      { name: 'Astronomical Clock', rating: 8.8 }
+    ],
     likes: 5120,
     comments: [
       { id: 'c56', user: 'prague_lover', text: 'Fairytale city! 🏰', timestamp: Date.now() - 1000 * 60 * 190 },
@@ -1045,8 +1413,17 @@ const tripData: Record<string, TripDetails> = {
       'https://images.unsplash.com/photo-1580537659466-0a9bfa916a54?w=800',
       'https://images.unsplash.com/photo-1605649487212-47bdab064df7?w=800',
     ],
-    restaurants: ['Dewakan', 'Bijan', 'Jalan Alor Street Food'],
-    activities: ['Petronas Towers', 'Batu Caves', 'KL Tower', 'Central Market'],
+    restaurants: [
+      { name: 'Dewakan', rating: 9.3 },
+      { name: 'Bijan', rating: 8.7 },
+      { name: 'Jalan Alor Street Food', rating: 8.4 }
+    ],
+    activities: [
+      { name: 'Petronas Towers', rating: 8.8 },
+      { name: 'Batu Caves', rating: 9.8 },
+      { name: 'KL Tower', rating: 8.7 },
+      { name: 'Central Market', rating: 9.7 }
+    ],
     likes: 6780,
     comments: [
       { id: 'c57', user: 'food_lover', text: 'Street food heaven! 🍜', timestamp: Date.now() - 1000 * 60 * 160 },
@@ -1060,8 +1437,17 @@ const tripData: Record<string, TripDetails> = {
       'https://images.unsplash.com/photo-1589394815804-964ed0be2eb5?w=800',
       'https://images.unsplash.com/photo-1582639590011-f5a8416d1101?w=800',
     ],
-    restaurants: ['Central', 'Maido', 'Astrid y Gastón'],
-    activities: ['Miraflores', 'Larco Museum', 'Huaca Pucllana', 'Barranco District'],
+    restaurants: [
+      { name: 'Central', rating: 9.2 },
+      { name: 'Maido', rating: 8.8 },
+      { name: 'Astrid y Gastón', rating: 8.3 }
+    ],
+    activities: [
+      { name: 'Miraflores', rating: 8.4 },
+      { name: 'Larco Museum', rating: 9.4 },
+      { name: 'Huaca Pucllana', rating: 8.4 },
+      { name: 'Barranco District', rating: 8.2 }
+    ],
     likes: 5890,
     comments: [
       { id: 'c58', user: 'foodie', text: 'Ceviche capital! 🐟', timestamp: Date.now() - 1000 * 60 * 180 },
@@ -1075,8 +1461,17 @@ const tripData: Record<string, TripDetails> = {
       'https://images.unsplash.com/photo-1547448415-e9f5b28e570d?w=800',
       'https://images.unsplash.com/photo-1520106212299-d99c443e4568?w=800',
     ],
-    restaurants: ['White Rabbit', 'Café Pushkin', 'Twins Garden'],
-    activities: ['Red Square', 'Kremlin', 'Bolshoi Theatre', 'St. Basil\'s Cathedral'],
+    restaurants: [
+      { name: 'White Rabbit', rating: 8.0 },
+      { name: 'Café Pushkin', rating: 9.6 },
+      { name: 'Twins Garden', rating: 8.3 }
+    ],
+    activities: [
+      { name: 'Red Square', rating: 9.5 },
+      { name: 'Kremlin', rating: 7.9 },
+      { name: 'Bolshoi Theatre', rating: 7.9 },
+      { name: "St. Basil's Cathedral", rating: 9.4 }
+    ],
     likes: 6340,
     comments: [
       { id: 'c59', user: 'russia_fan', text: 'Imperial grandeur! 🏛️', timestamp: Date.now() - 1000 * 60 * 140 },
@@ -1102,6 +1497,30 @@ const formatRangeAndDaysLeft = (start: string, end: string) => {
 
 type MapMode = 'followers' | 'myTrips' | 'featured';
 
+// City to country mapping
+const cityToCountry: Record<string, string> = {
+  'New York': 'United States',
+  'London': 'United Kingdom',
+  'Tokyo': 'Japan',
+  'Paris': 'France',
+  'Sydney': 'Australia',
+  'Rome': 'Italy',
+  'Barcelona': 'Spain',
+  'Dubai': 'United Arab Emirates',
+  'Bangkok': 'Thailand',
+  'Istanbul': 'Turkey',
+  'Amsterdam': 'Netherlands',
+  'Berlin': 'Germany',
+  'Singapore': 'Singapore',
+  'Los Angeles': 'United States',
+  'Toronto': 'Canada',
+  'Mexico City': 'Mexico',
+  'Rio de Janeiro': 'Brazil',
+  'Cape Town': 'South Africa',
+  'Mumbai': 'India',
+  'Seoul': 'South Korea',
+};
+
 export default function ExploreScreen() {
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [selectedFollower, setSelectedFollower] = useState<string | null>(null);
@@ -1117,7 +1536,15 @@ export default function ExploreScreen() {
   const [comments, setComments] = useState<{ id: string; user: string; text: string; timestamp: number }[]>([]);
   const [commentInput, setCommentInput] = useState<string>('');
   const [containerH, setContainerH] = useState<number>(0);
-  const sheetH = useRef(new Animated.Value(320)).current;
+  const sheetH = useRef(new Animated.Value(600)).current;
+  const sheetOpacity = useRef(new Animated.Value(0)).current;
+  const sheetTranslateY = useRef(new Animated.Value(1000)).current;
+  const sheetScale = useRef(new Animated.Value(0.85)).current;
+  
+  // Stories viewer state
+  const [showStoriesViewer, setShowStoriesViewer] = useState(false);
+  const [currentUserIndex, setCurrentUserIndex] = useState(0);
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
 
   const onContainerLayout = (e: LayoutChangeEvent) => {
     setContainerH(e.nativeEvent.layout.height);
@@ -1127,9 +1554,9 @@ export default function ExploreScreen() {
 
   const panResponder = useRef(
     PanResponder.create({
-      onMoveShouldSetPanResponder: (_, gesture) => Math.abs(gesture.dy) > 8,
+      onMoveShouldSetPanResponder: (_, gesture) => Math.abs(gesture.dy) > 5,
       onPanResponderMove: (_, gesture) => {
-        const collapsed = 320;
+        const collapsed = 600;
         const expanded = getExpandedH();
         // @ts-ignore accessing current value
         const current = (sheetH as any)._value as number;
@@ -1137,13 +1564,19 @@ export default function ExploreScreen() {
         sheetH.setValue(next);
       },
       onPanResponderRelease: (_, gesture) => {
-        const collapsed = 320;
+        const collapsed = 600;
         const expanded = getExpandedH();
         // @ts-ignore
         const current = (sheetH as any)._value as number;
         const mid = (collapsed + expanded) / 2;
         const snapTo = current > mid || gesture.vy < -0.5 ? expanded : collapsed;
-        Animated.spring(sheetH, { toValue: snapTo, useNativeDriver: false, friction: 9, tension: 60 }).start();
+        Animated.spring(sheetH, { 
+          toValue: snapTo, 
+          useNativeDriver: false, 
+          friction: 8, 
+          tension: 40,
+          velocity: gesture.vy
+        }).start();
       },
     })
   ).current;
@@ -1161,7 +1594,12 @@ export default function ExploreScreen() {
     const currentH = (sheetH as any)._value as number;
     const expanded = getExpandedH();
     if (delta < -4 && currentH < expanded - 8) {
-      Animated.spring(sheetH, { toValue: expanded, useNativeDriver: false, friction: 9, tension: 60 }).start();
+      Animated.spring(sheetH, { 
+        toValue: expanded, 
+        useNativeDriver: false, 
+        friction: 8, 
+        tension: 40 
+      }).start();
     }
     lastScrollYRef.current = y;
   };
@@ -1183,6 +1621,7 @@ export default function ExploreScreen() {
   const handleSelectTraveler = (post: Post) => {
     setSelectedFollower(post.username);
     setSelectedPost(post);
+    setCurrentPhotoIndex(0);
 
     const userPosts = samplePosts.filter(p => p.username === post.username);
     const coords = userPosts.map(p => ({ latitude: p.latitude, longitude: p.longitude }));
@@ -1217,7 +1656,24 @@ export default function ExploreScreen() {
         setComments([]);
         setCommentInput('');
       }
-      Animated.spring(sheetH, { toValue: 320, useNativeDriver: false, friction: 9, tension: 60 }).start();
+      // Reset to initial values first
+      sheetTranslateY.setValue(1000);
+      sheetScale.setValue(0.85);
+      sheetOpacity.setValue(0);
+      
+      // Then animate in
+      Animated.parallel([
+        Animated.spring(sheetH, { toValue: 600, useNativeDriver: false, friction: 10, tension: 25 }),
+        Animated.spring(sheetTranslateY, { toValue: 0, useNativeDriver: false, friction: 10, tension: 25 }),
+        Animated.spring(sheetScale, { toValue: 1, useNativeDriver: false, friction: 10, tension: 25 }),
+        Animated.timing(sheetOpacity, { toValue: 1, duration: 500, useNativeDriver: false })
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(sheetTranslateY, { toValue: 1000, duration: 400, useNativeDriver: false }),
+        Animated.timing(sheetScale, { toValue: 0.85, duration: 400, useNativeDriver: false }),
+        Animated.timing(sheetOpacity, { toValue: 0, duration: 400, useNativeDriver: false })
+      ]).start();
     }
   }, [selectedPost]);
 
@@ -1618,8 +2074,16 @@ export default function ExploreScreen() {
       {/* Recent Travelers - Avatar bar */}
       <View style={styles.avatarsContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 12 }}>
-          {samplePosts.map((post) => (
-            <TouchableOpacity key={post.id} style={styles.avatarItem} onPress={() => handleSelectTraveler(post)}>
+          {samplePosts.map((post, index) => (
+            <TouchableOpacity 
+              key={post.id} 
+              style={styles.avatarItem} 
+              onPress={() => {
+                setCurrentUserIndex(index);
+                setCurrentPhotoIndex(0);
+                setShowStoriesViewer(true);
+              }}
+            >
               <Avatar uri={post.avatar} style={styles.avatarImage} />
               <Text style={styles.avatarName} numberOfLines={1}>
                 @{post.username}
@@ -1693,10 +2157,28 @@ export default function ExploreScreen() {
 
       {/* Selected Post Details */}
       {selectedPost && (
-        <Animated.View style={[styles.detailsContainer, { height: sheetH }]}>
+        <Animated.View style={[
+          styles.detailsContainer, 
+          { 
+            height: sheetH, 
+            opacity: sheetOpacity,
+            transform: [
+              { translateY: sheetTranslateY },
+              { scale: sheetScale }
+            ]
+          }
+        ]}>
           <View style={styles.dragHandleArea} {...panResponder.panHandlers}>
             <View style={styles.dragHandle} />
           </View>
+          <TouchableOpacity
+            onPress={() => setSelectedPost(null)}
+            style={styles.closeTouchable}
+            activeOpacity={0.6}
+          >
+            <Ionicons name="close-circle" size={32} color="#666" />
+          </TouchableOpacity>
+          
           <ScrollView
             style={styles.detailsScroll}
             contentContainerStyle={styles.detailsContent}
@@ -1704,16 +2186,7 @@ export default function ExploreScreen() {
             onScroll={handleScroll}
             scrollEventThrottle={16}
           >
-            <TouchableOpacity
-              onPress={() => setSelectedPost(null)}
-              hitSlop={{ top: 12, right: 12, bottom: 12, left: 12 }}
-              style={styles.closeTouchable}
-              activeOpacity={0.6}
-            >
-              <Ionicons name="close" size={24} color="#666" />
-            </TouchableOpacity>
-            <Text style={styles.cityName}>{selectedPost.title}</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
               <TouchableOpacity
                 style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}
                 onPress={() => router.push({ pathname: '/profile/[username]', params: { username: selectedPost.username } })}
@@ -1729,45 +2202,190 @@ export default function ExploreScreen() {
                 style={styles.messageBtn}
                 onPress={() => router.push({ pathname: '/chat/[username]', params: { username: selectedPost.username } })}
               >
-                <Ionicons name="chatbubble-ellipses" size={16} color="#fff" />
+                <Ionicons name="chatbubble-ellipses" size={16} color="#0fa3a3" />
                 <Text style={styles.messageBtnText}>Message</Text>
               </TouchableOpacity>
             </View>
+            
+            {/* Location Hero Section */}
+            <View style={styles.locationHero}>
+              <View style={styles.locationIconContainer}>
+                <Ionicons name="location" size={32} color="#0fa3a3" />
+              </View>
+              <View style={styles.locationTextContainer}>
+                <Text style={styles.locationTitle}>{selectedPost.title}</Text>
+                <Text style={styles.locationSubtitle}>
+                  {cityToCountry[selectedPost.title] || 'Travel Destination'}
+                </Text>
+              </View>
+            </View>
+            
             {(() => {
               const td = tripData[selectedPost.username];
               const gallery = td?.photos?.length ? td.photos : [selectedPost.image];
+              const imageWidth = width - 40; // Account for modal padding (20px on each side)
               return (
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.gallery} contentContainerStyle={{ gap: 8 }}>
-                  {gallery.slice(0, 10).map((uri, idx) => (
-                    <Image key={`${selectedPost.id}-g-${idx}`} source={{ uri }} style={styles.galleryImg} />
-                  ))}
-                </ScrollView>
+                <View style={styles.galleryContainer}>
+                  <FlatList
+                    data={gallery.slice(0, 10)}
+                    horizontal
+                    pagingEnabled
+                    showsHorizontalScrollIndicator={false}
+                    snapToInterval={imageWidth}
+                    decelerationRate="fast"
+                    onMomentumScrollEnd={(event) => {
+                      const index = Math.round(event.nativeEvent.contentOffset.x / imageWidth);
+                      setCurrentPhotoIndex(index);
+                    }}
+                    renderItem={({ item, index }) => (
+                      <Image 
+                        key={`${selectedPost.id}-g-${index}`} 
+                        source={{ uri: item }} 
+                        style={[styles.galleryImgFull, { width: imageWidth }]} 
+                        resizeMode="cover" 
+                      />
+                    )}
+                    keyExtractor={(item, index) => `${selectedPost.id}-photo-${index}`}
+                  />
+                  {gallery.length > 1 && (
+                    <View style={styles.pageIndicatorContainer}>
+                      {gallery.slice(0, 10).map((_, idx) => (
+                        <View
+                          key={`indicator-${idx}`}
+                          style={[
+                            styles.pageIndicatorDot,
+                            idx === currentPhotoIndex && styles.pageIndicatorDotActive
+                          ]}
+                        />
+                      ))}
+                    </View>
+                  )}
+                </View>
               );
             })()}
 
             {tripData[selectedPost.username] && (
               <View style={styles.tripInfoBox}>
-                <Text style={styles.tripInfoTitle}>Trip Info</Text>
-                <Text style={styles.tripInfoText}>
-                  {formatRangeAndDaysLeft(tripData[selectedPost.username].startDate, tripData[selectedPost.username].endDate)}
-                </Text>
+                <Text style={styles.tripInfoTitle}>Trip Details</Text>
+                
+                {/* Dates */}
+                <View style={styles.tripInfoRow}>
+                  <Ionicons name="calendar-outline" size={16} color="#0fa3a3" />
+                  <Text style={styles.tripInfoText}>
+                    {formatRangeAndDaysLeft(tripData[selectedPost.username].startDate, tripData[selectedPost.username].endDate)}
+                  </Text>
+                </View>
+
+                {/* Duration */}
+                {tripData[selectedPost.username].duration && (
+                  <View style={styles.tripInfoRow}>
+                    <Ionicons name="time-outline" size={16} color="#0fa3a3" />
+                    <Text style={styles.tripInfoText}>{tripData[selectedPost.username].duration}</Text>
+                  </View>
+                )}
+
+                {/* Budget */}
+                {tripData[selectedPost.username].budget && (
+                  <View style={styles.tripInfoRow}>
+                    <Ionicons name="cash-outline" size={16} color="#0fa3a3" />
+                    <Text style={styles.tripInfoText}>{tripData[selectedPost.username].budget}</Text>
+                  </View>
+                )}
+
+                {/* Best Time */}
+                {tripData[selectedPost.username].bestTime && (
+                  <View style={styles.tripInfoRow}>
+                    <Ionicons name="sunny-outline" size={16} color="#0fa3a3" />
+                    <Text style={styles.tripInfoText}>Best time: {tripData[selectedPost.username].bestTime}</Text>
+                  </View>
+                )}
+
+                {/* Restaurants */}
                 {!!tripData[selectedPost.username].restaurants?.length && (
-                  <View style={{ marginTop: 10 }}>
-                    <Text style={styles.subHeading}>Restaurants</Text>
+                  <View style={{ marginTop: 12 }}>
+                    <Text style={styles.subHeading}>🍽️ Restaurants</Text>
                     <View style={styles.chipsRow}>
-                      {tripData[selectedPost.username].restaurants.map((r, i) => (
-                        <View key={`r-${i}`} style={styles.chip}><Text style={styles.chipText}>{r}</Text></View>
-                      ))}
+                      {tripData[selectedPost.username].restaurants.map((r, i) => {
+                        const getRatingColor = (rating: number) => {
+                          if (rating >= 7.5) return '#22c55e'; // green
+                          if (rating >= 5) return '#eab308'; // yellow
+                          return '#ef4444'; // red
+                        };
+                        return (
+                          <View key={`r-${i}`} style={styles.chip}>
+                            <Text style={styles.chipText}>
+                              {typeof r === 'string' ? r : (
+                                <>
+                                  {r.name}{' '}
+                                  <Text style={{ color: getRatingColor(r.rating), fontWeight: '600' }}>
+                                    {r.rating.toFixed(1)}
+                                  </Text>
+                                </>
+                              )}
+                            </Text>
+                          </View>
+                        );
+                      })}
                     </View>
                   </View>
                 )}
+
+                {/* Activities */}
                 {!!tripData[selectedPost.username].activities?.length && (
-                  <View style={{ marginTop: 10 }}>
-                    <Text style={styles.subHeading}>Activities</Text>
+                  <View style={{ marginTop: 12 }}>
+                    <Text style={styles.subHeading}>🎯 Activities</Text>
                     <View style={styles.chipsRow}>
-                      {tripData[selectedPost.username].activities.map((a, i) => (
-                        <View key={`a-${i}`} style={styles.chip}><Text style={styles.chipText}>{a}</Text></View>
-                      ))}
+                      {tripData[selectedPost.username].activities.map((a, i) => {
+                        const getRatingColor = (rating: number) => {
+                          if (rating >= 7.5) return '#22c55e'; // green
+                          if (rating >= 5) return '#eab308'; // yellow
+                          return '#ef4444'; // red
+                        };
+                        return (
+                          <View key={`a-${i}`} style={styles.chip}>
+                            <Text style={styles.chipText}>
+                              {typeof a === 'string' ? a : (
+                                <>
+                                  {a.name}{' '}
+                                  <Text style={{ color: getRatingColor(a.rating), fontWeight: '600' }}>
+                                    {a.rating.toFixed(1)}
+                                  </Text>
+                                </>
+                              )}
+                            </Text>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  </View>
+                )}
+
+                {/* Hotels */}
+                {!!tripData[selectedPost.username].hotels?.length && (
+                  <View style={{ marginTop: 12 }}>
+                    <Text style={styles.subHeading}>🏨 Hotels</Text>
+                    <View style={styles.chipsRow}>
+                      {tripData[selectedPost.username].hotels.map((h, i) => {
+                        const getRatingColor = (rating: number) => {
+                          if (rating >= 7.5) return '#22c55e'; // green
+                          if (rating >= 5) return '#eab308'; // yellow
+                          return '#ef4444'; // red
+                        };
+                        return (
+                          <View key={`h-${i}`} style={styles.chip}>
+                            <Text style={styles.chipText}>
+                              {typeof h === 'string' ? h : (
+                                <>
+                                  {h.name}{' '}
+                                  <Text style={{ color: getRatingColor(h.rating), fontWeight: '600' }}>
+                                    {h.rating.toFixed(1)}
+                                  </Text>
+                                </>
+                              )}
+                            </Text>
+                          </View>
+                        );
+                      })}
                     </View>
                   </View>
                 )}
@@ -1838,25 +2456,125 @@ export default function ExploreScreen() {
         </Animated.View>
       )}
 
-      {/* Floating buttons */}
-      <View style={styles.fabContainer}>
-        {/* Map mode toggle */}
-        <TouchableOpacity
-          style={[styles.fab, { marginBottom: 12 }]}
-          onPress={handleToggleMapMode}
-          activeOpacity={0.8}
-        >
-          <Ionicons name={getMapModeIcon()} size={22} color="#0fa3a3" />
-        </TouchableOpacity>
-        {/* DM button */}
-        <TouchableOpacity
-          style={styles.fab}
-          onPress={() => router.push({ pathname: '/chat' })}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="chatbubble-ellipses" size={22} color="#0fa3a3" />
-        </TouchableOpacity>
-      </View>
+      {/* Floating buttons - hide when post is selected */}
+      {!selectedPost && (
+        <View style={styles.fabContainer}>
+          {/* Map mode toggle */}
+          <TouchableOpacity
+            style={[styles.fab, { marginBottom: 12 }]}
+            onPress={handleToggleMapMode}
+            activeOpacity={0.8}
+          >
+            <Ionicons name={getMapModeIcon()} size={22} color="#0fa3a3" />
+          </TouchableOpacity>
+          {/* DM button */}
+          <TouchableOpacity
+            style={styles.fab}
+            onPress={() => router.push({ pathname: '/chat' })}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="chatbubble-ellipses" size={22} color="#0fa3a3" />
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Full-Screen Stories Viewer */}
+      {showStoriesViewer && (() => {
+        const currentUser = samplePosts[currentUserIndex];
+        const currentUserData = tripData[currentUser.username];
+        const photos = currentUserData?.photos || [currentUser.image];
+        const currentPhoto = photos[currentPhotoIndex];
+
+        return (
+          <View style={styles.storiesViewerContainer}>
+            <Image source={{ uri: currentPhoto }} style={styles.storiesImage} resizeMode="cover" />
+            
+            {/* Dark overlay for better text visibility */}
+            <View style={styles.storiesOverlay} />
+            
+            {/* Top bar with progress indicators */}
+            <View style={styles.storiesTopBar}>
+              <View style={styles.progressBarsContainer}>
+                {photos.map((_, idx) => (
+                  <View key={idx} style={styles.progressBarBg}>
+                    <View 
+                      style={[
+                        styles.progressBarFill, 
+                        { width: idx < currentPhotoIndex ? '100%' : idx === currentPhotoIndex ? '50%' : '0%' }
+                      ]} 
+                    />
+                  </View>
+                ))}
+              </View>
+              
+              <View style={styles.storiesHeader}>
+                <TouchableOpacity 
+                  style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}
+                  onPress={() => {
+                    setShowStoriesViewer(false);
+                    router.push({ pathname: '/profile/[username]', params: { username: currentUser.username } });
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Avatar uri={currentUser.avatar} style={styles.storiesAvatar} />
+                  <View style={{ marginLeft: 10 }}>
+                    <Text style={styles.storiesUsername}>@{currentUser.username}</Text>
+                    <Text style={styles.storiesLocation}>{currentUser.title}</Text>
+                  </View>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setShowStoriesViewer(false)} style={styles.storiesCloseBtn}>
+                  <Ionicons name="close" size={30} color="#fff" />
+                </TouchableOpacity>
+              </View>
+            </View>
+            
+            {/* Caption and Likes at Bottom */}
+            <TouchableOpacity 
+              style={styles.storiesCaptionContainer}
+              onPress={() => {
+                setShowStoriesViewer(false);
+                setSelectedPost(currentUser);
+              }}
+              activeOpacity={0.9}
+            >
+              <View style={styles.storiesLikesRow}>
+                <Ionicons name="heart" size={20} color="#fff" />
+                <Text style={styles.storiesLikesText}>
+                  {currentUserData?.likes || 0} likes
+                </Text>
+              </View>
+              <Text style={styles.storiesCaptionText} numberOfLines={2}>
+                <Text style={styles.storiesCaptionUsername}>@{currentUser.username}</Text>
+                {' '}
+                {currentUserData?.caption || `Amazing views from ${currentUser.title}! 🌍✨`}
+              </Text>
+              <Text style={styles.storiesTapHint}>Tap to view full post</Text>
+            </TouchableOpacity>
+            
+            {/* Swipe right for next photo */}
+            <TouchableOpacity 
+              style={styles.storiesSwipeRight}
+              onPress={() => {
+                if (currentPhotoIndex < photos.length - 1) {
+                  setCurrentPhotoIndex(currentPhotoIndex + 1);
+                } else {
+                  // Last photo - go to next person
+                  if (currentUserIndex < samplePosts.length - 1) {
+                    setCurrentUserIndex(currentUserIndex + 1);
+                    setCurrentPhotoIndex(0);
+                  } else {
+                    setShowStoriesViewer(false);
+                  }
+                }
+              }}
+            >
+              <Text style={styles.storiesSwipeText}>
+                {currentPhotoIndex < photos.length - 1 ? '→ Swipe for next photo' : currentUserIndex < samplePosts.length - 1 ? '→ Next person' : 'End'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        );
+      })()}
     </View>
   );
 }
@@ -1982,9 +2700,16 @@ const styles = StyleSheet.create({
   },
   closeTouchable: {
     position: 'absolute',
-    top: 12,
-    right: 12,
+    top: 8,
+    right: 8,
     zIndex: 10,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   cityName: {
     fontSize: 24,
@@ -2083,22 +2808,114 @@ const styles = StyleSheet.create({
   detailsScroll: {
     flex: 1,
   },
+  // Location Hero styles
+  locationHero: {
+    backgroundColor: '#0fa3a3',
+    borderRadius: 14,
+    padding: 14,
+    marginTop: 0,
+    marginBottom: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#0fa3a3',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 5,
+    borderLeftWidth: 4,
+    borderLeftColor: '#fff',
+    borderRightWidth: 4,
+    borderRightColor: 'rgba(255,255,255,0.3)',
+  },
+  locationIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.5)',
+  },
+  locationTextContainer: {
+    flex: 1,
+  },
+  locationTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#fff',
+    marginBottom: 3,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+  locationSubtitle: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.85)',
+    fontWeight: '500',
+    fontStyle: 'italic',
+  },
+  travelLocation: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 2,
+  },
+  travelDates: {
+    fontSize: 11,
+    color: '#666',
+    marginTop: 2,
+  },
   // New styles for trip gallery, info, likes/comments
   gallery: {
     marginTop: 8,
   },
+  galleryContainer: {
+    marginTop: 8,
+    position: 'relative',
+  },
   galleryImg: {
-    width: 140,
-    height: 100,
-    borderRadius: 10,
+    width: 340,
+    height: 260,
+    borderRadius: 12,
+  },
+  galleryImgFull: {
+    height: 260,
+    borderRadius: 12,
+  },
+  pageIndicatorContainer: {
+    position: 'absolute',
+    bottom: 12,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 6,
+  },
+  pageIndicatorDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+  },
+  pageIndicatorDotActive: {
+    backgroundColor: '#fff',
+    width: 24,
   },
   tripInfoBox: {
-    marginTop: 12,
-    padding: 12,
+    marginTop: 16,
+    padding: 16,
     backgroundColor: '#fafafa',
-    borderRadius: 10,
+    borderRadius: 12,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: '#eee',
+  },
+  tripInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    gap: 8,
   },
   tripInfoTitle: {
     fontWeight: '700',
@@ -2190,5 +3007,126 @@ const styles = StyleSheet.create({
     backgroundColor: '#0fa3a3',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  storiesViewerContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#000',
+    zIndex: 1000,
+  },
+  storiesImage: {
+    width: '100%',
+    height: '100%',
+  },
+  storiesOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 70,
+    backgroundColor: 'rgba(0,0,0,0.25)',
+  },
+  storiesTopBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    paddingTop: 10,
+    paddingHorizontal: 16,
+  },
+  progressBarsContainer: {
+    flexDirection: 'row',
+    gap: 4,
+    marginBottom: 8,
+  },
+  progressBarBg: {
+    flex: 1,
+    height: 3,
+    backgroundColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: '#fff',
+  },
+  storiesHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  storiesAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  storiesUsername: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  storiesLocation: {
+    color: '#fff',
+    fontSize: 12,
+    opacity: 0.8,
+  },
+  storiesCloseBtn: {
+    padding: 4,
+  },
+  storiesCaptionContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    paddingBottom: 30,
+    backgroundColor: 'rgba(0,0,0,0.25)',
+  },
+  storiesLikesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  storiesLikesText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 6,
+  },
+  storiesCaptionText: {
+    color: '#fff',
+    fontSize: 14,
+    lineHeight: 18,
+    marginBottom: 4,
+  },
+  storiesCaptionUsername: {
+    fontWeight: '700',
+  },
+  storiesTapHint: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 12,
+    fontStyle: 'italic',
+  },
+  storiesSwipeRight: {
+    position: 'absolute',
+    bottom: 140,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  storiesSwipeText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
   },
 });

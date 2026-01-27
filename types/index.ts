@@ -40,6 +40,25 @@ export interface Trip {
   tags: string[];
   createdAt: Date;
   updatedAt: Date;
+  // Optional detailed trip information
+  restaurants?: Array<{
+    name: string;
+    cuisine: string;
+    rating: number;
+  }>;
+  hotels?: Array<{
+    name: string;
+    area: string;
+    rating: number;
+  }>;
+  activities?: Array<{
+    name: string;
+    duration: string;
+    rating: number;
+  }>;
+  transportation?: string;
+  bestTime?: string;
+  estimatedBudget?: string;
 }
 
 export interface ItineraryDay {

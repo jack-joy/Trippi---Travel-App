@@ -3,6 +3,10 @@
 ## What is Trippi
 Trippi is a modern social travel planning app built with React Native and Expo. Connect with fellow travelers, plan trips, share experiences, and discover new destinations. Right now the app is in development and is not ready for production. It is mostly an idea and a concept that I am working on. I have only been working on the IOS features of the app. I am continuing to build the app and add new features to it daily, so please forgive any bugs or issues that may come up. I have not had time to fully implement all the features that I have planned, but I am working on it! I enjoy building apps in my free time so, I am open to suggestions, advice, and feedback you may have!
 
+## Trippi App Demo
+
+<video src="screenshots/app-demo.mp4" controls width="600"></video>
+
 ## Features
 
 ### Explore Map
@@ -23,11 +27,15 @@ Trippi is a modern social travel planning app built with React Native and Expo. 
 - Browse available trips from other travelers in order to get inspired and plan your next trip
 
 ### Trip Planning
-- Create and manage your trips with detailed itineraries
-- Add destinations, dates, and descriptions
+- Create and manage your trips with detailed itineraries including restaurants, hotels, and activities
+- View trips in three categories: Upcoming, Current, and Past
+- Add destinations, dates, descriptions, and comprehensive trip details
 - Share trips publicly or keep them private
 - Collaborate with friends on trip plans
-- Create trips from your bucket list or from other peoples trips
+- Create trips manually or import from your bucket list
+- Track daily schedules with activities and restaurant reservations (with times)
+- View trip statistics including budget, weather forecasts, and checklists
+- Interactive calendar view showing your full itinerary
 
 ### Social Feed
 - Like, comment, and save posts
@@ -44,6 +52,32 @@ Trippi is a modern social travel planning app built with React Native and Expo. 
 - Interactive travel map showing visited locations
 - Display recent trips, upcoming plans, and bucket list
 
+## Screenshots
+
+### Explore Map
+<img src="screenshots/Map.png" width="300" alt="Explore Map">
+
+### Post
+<img src="screenshots/Post.png" width="300" alt="Explore Map">
+
+### Social Feed
+<img src="screenshots/Post_Photos.png" width="300" alt="Social Feed">
+
+### Trip Booking
+<img src="screenshots/Hotels_Book.png" width="300" alt="Trip Planning">
+
+### Bucket List Page
+<img src="screenshots/Bucket_Details.png" width="300" alt="Bucket List">
+
+### Bucket List Example
+<img src="screenshots/Bucket_Overview.png" width="300" alt="Bucket List">
+
+### Trip Planning
+<img src="screenshots/Current_Trip.png" width="300" alt="Bucket List">
+
+### User Profile
+<img src="screenshots/Profile_Overview.png" width="300" alt="User Profile">
+
 ## Tech Stack
 
 - **Framework**: React Native with Expo
@@ -52,9 +86,10 @@ Trippi is a modern social travel planning app built with React Native and Expo. 
 - **Maps**: React Native Maps
 - **Authentication**: Supabase Auth
 - **Database**: Supabase (PostgreSQL) (Still being worked on)
-- **Styling**: NativeWind (TailwindCSS for React Native)
-- **State Management**: React Context API
+- **Styling**: React Native StyleSheet (custom styling)
+- **State Management**: React Hooks (useState, useEffect)
 - **UI Components**: Custom components with Ionicons
+- **Image Handling**: Unsplash API for trip photos
 
 ## Project Structure
 
@@ -135,18 +170,33 @@ trippi/
 - `npm start` - Start Expo development server
 - `i` - Run on iOS
 
+## Current Features (Implemented)
+
+- Trip management with Upcoming, Current, and Past tabs
+- Detailed trip information (restaurants, hotels, activities with ratings)
+- Daily itinerary view with calendar
+- Restaurant reservations with time tracking
+- Trip statistics (budget, weather, checklist)
+- Create trips manually or import from bucket list
+- Trip detail modal with full information display
+- Interactive map with trip markers
+- Bucket list management
+- User profiles with travel stats
+- Social feed with likes and comments
+- Direct messaging interface
+
 ## Features in Development / Future Improvements
 
-- [ ] Real-time chat functionality
+- [ ] Real-time chat functionality (UI complete, backend needed)
 - [ ] Push notifications
 - [ ] Trip recommendations based on preferences
-- [ ] Photo upload and storage
+- [ ] Photo upload and storage (currently using Unsplash URLs)
 - [ ] Advanced search and filters
-- [ ] Trip collaboration features
-- [ ] Flight and hotel booking integration
-- [ ] Weather forecasts for trip destinations
+- [ ] Live trip collaboration features
+- [ ] Flight and hotel booking integration (UI placeholder exists)
+- [ ] Live weather API integration (mock data currently)
 - [ ] Currency converter and budget tracking
-- [ ] Expense management/splitting for group trips to ensure everyone gets paid (Venmo Integration)
+- [ ] Expense management/splitting for group trips (Venmo Integration)
 - [ ] Shared group itineraries with voting
 - [ ] AI-powered trip suggestions
 - [ ] Integration with calendar apps
@@ -158,27 +208,10 @@ trippi/
 - [ ] Travel rewards and gamification
 - [ ] Export trips to PDF
 - [ ] Dark mode support
-- [ ] Work more on UI/UX refinement efforts enhancing the visual design and layout of the application
-- [ ] Work more on the backend and database to ensure the app is secure and reliable
-- [ ] Work more on the authentication system to ensure the app is secure and reliable
-- [ ] Work on integrating the apps name Trippi into the app and the logo
-
-## Screenshots
-
-### Explore Map
-<img src="screenshots/explore-map.png" width="300" alt="Explore Map">
-
-### Trip Planning
-<img src="screenshots/book.png" width="300" alt="Trip Planning">
-
-### Bucket List
-<img src="screenshots/bucket.png" width="300" alt="Bucket List">
-
-### Social Feed
-<img src="screenshots/trip.png" width="300" alt="Social Feed">
-
-### User Profile
-<img src="screenshots/profile.png" width="300" alt="User Profile">
+- [ ] UI/UX refinement and visual design enhancements
+- [ ] Backend and database implementation (Supabase integration)
+- [ ] Enhanced authentication system
+- [ ] Integrate Trippi branding and logo throughout app
 
 ## Contributing
 
