@@ -55,28 +55,28 @@ Trippi is a modern social travel planning app built with React Native and Expo. 
 ## Screenshots
 
 ### Explore Map
-<img src="screenshots/Map.png" width="300" alt="Explore Map">
+<img src="screenshots/Map.PNG" width="300" alt="Explore Map">
 
 ### Post
-<img src="screenshots/Post.png" width="300" alt="Explore Map">
+<img src="screenshots/Post.PNG" width="300" alt="Explore Map">
 
 ### Social Feed
-<img src="screenshots/Post_Photos.png" width="300" alt="Social Feed">
+<img src="screenshots/Post_Photos.PNG" width="300" alt="Social Feed">
 
 ### Trip Booking
-<img src="screenshots/Hotels_Book.png" width="300" alt="Trip Planning">
+<img src="screenshots/Hotels_Book.PNG" width="300" alt="Trip Planning">
 
 ### Bucket List Page
-<img src="screenshots/Bucket_Details.png" width="300" alt="Bucket List">
+<img src="screenshots/Bucket_Details.PNG" width="300" alt="Bucket List">
 
 ### Bucket List Example
-<img src="screenshots/Bucket_Overview.png" width="300" alt="Bucket List">
+<img src="screenshots/Bucket_Overview.PNG" width="300" alt="Bucket List">
 
 ### Trip Planning
-<img src="screenshots/Current_Trip.png" width="300" alt="Bucket List">
+<img src="screenshots/Current_Trip.PNG" width="300" alt="Bucket List">
 
 ### User Profile
-<img src="screenshots/Profile_Overview.png" width="300" alt="User Profile">
+<img src="screenshots/Profile_Overview.PNG" width="300" alt="User Profile">
 
 ## Tech Stack
 
